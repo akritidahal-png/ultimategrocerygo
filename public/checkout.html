@@ -94,18 +94,78 @@
       </div>
     </div>
 
-    <!-- DELIVERY SLOTS + SUMMARY -->
-    <div class="card">
-      <label>Delivery time slot</label>
-      <select id="slotSelect" disabled>
-        <option value="" disabled selected>Select a delivery slot</option>
-      </select>
-      <div class="small" style="margin-top:8px">Choose a delivery slot based on your postcode.</div>
+   <script>
+  // Delivery postcode zones based on Logan, Ipswich, Brisbane, Redland Bay, and Moreton Bay
+  const zones = {
+    zone1: {
+      name: "Logan & Ipswich",
+      postcodes: [
+        '4000', '4005', '4006', '4007', '4008', '4009', '4010', '4011', '4012', '4013', '4014', 
+        '4017', '4018', '4025', '4029', '4030', '4031', '4032', '4034', '4035', '4036', '4051', 
+        '4053', '4054', '4055', '4059', '4060', '4061', '4064', '4065', '4066', '4067', '4068', 
+        '4069', '4070', '4072', '4073', '4074', '4075', '4076', '4077', '4078'
+      ],
+      slots: ['8:00 AM - 12:00 PM', '12:00 PM - 4:00 PM', '4:00 PM - 7:00 PM']
+    },
+    zone2: {
+      name: "Brisbane & Redland Bay",
+      postcodes: [
+        '4300', '4301', '4303', '4304', '4305', '4306', '4307', '4308', '4311', '4340', '4346', 
+        '4500', '4501', '4502', '4503', '4504', '4505', '4506', '4507', '4508', '4509', '4510'
+      ],
+      slots: ['8:00 AM - 12:00 PM', '12:00 PM - 4:00 PM', '4:00 PM - 7:00 PM']
+    },
+    zone3: {
+      name: "Moreton Bay",
+      postcodes: [
+        '4501', '4502', '4503', '4504', '4505', '4506', '4507', '4508', '4509', '4510', '4511', 
+        '4512', '4513', '4514', '4515', '4516', '4517', '4518', '4519', '4520', '4521'
+      ],
+      slots: ['8:00 AM - 12:00 PM', '12:00 PM - 4:00 PM', '4:00 PM - 7:00 PM']
+    }
+  };
 
-      <div style="margin-top:14px" class="small"><strong>Order summary</strong></div>
-      <div class="summary-line"><div>Subtotal</div><div id="subtotalText">$0.00</div></div>
-      <div class="summary-line"><div>Delivery fee</div><div>$10.00</div></div>
-      <div class="total-line"><div>Total</div><div id="totalText">$0.00</div></div>
+  // Function to validate postcode and display available delivery slots
+  function validatePostcode() {
+    const postcode = document.getElementById('postcode').value.trim();
+    let zone = null;
+
+    // Determine zone based on postcode
+    for (let key in zones) {
+      if (zones[key].postcodes.includes(postcode)) {
+        zone = zones[key];
+        break;
+      }
+    }
+
+    const slotSelect = document.getElementById('slotSelect');
+    const confirmBtn = document.getElementById('confirmBtn');
+    const postcodeMsg = document.getElementById('postcodeMsg');
+
+    if (zone) {
+      // Populate slots for the detected zone
+      slotSelect.innerHTML = zone.slots.map(slot => `<option value="${slot}">${slot}</option>`).join('');
+      slotSelect.disabled = false;
+      confirmBtn.disabled = false;
+      showMessage(`Delivery available in ${zone.name}. Select a time slot.`);
+    } else {
+      slotSelect.innerHTML = '<option value="" disabled selected>No delivery slots available for this postcode</option>';
+      slotSelect.disabled = true;
+      confirmBtn.disabled = true;
+      showMessage('Sorry, delivery is not available in your area. Please check your postcode.');
+    }
+  }
+
+  // Helper function to display messages to the user
+  function showMessage(msg) {
+    document.getElementById('postcodeMsg').style.display = 'block';
+    document.getElementById('postcodeMsg').textContent = msg;
+  }
+
+  // Event listener to trigger postcode validation
+  document.getElementById('postcode').addEventListener('input', validatePostcode);
+</script>
+tal-line"><div>Total</div><div id="totalText">$0.00</div></div>
     </div>
 
     <!-- PAYMENT -->
@@ -240,3 +300,4 @@
   </script>
 </body>
 </html>
+
