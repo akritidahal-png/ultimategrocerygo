@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
     // Create the payment intent in Stripe
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount),  // Ensure amount is in cents
+      amount: Math.round(amount * 100),  // Convert amount to cents
       currency: "aud",
       payment_method_types: ["card"],
       metadata: { order_id: orderData.id },
@@ -47,6 +47,6 @@ export default async function handler(req, res) {
     res.status(200).json({ clientSecret: paymentIntent.client_secret });
   } catch (err) {
     console.error("Payment creation error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: `Payment creation failed: ${err.message || "Unknown error"}` });
   }
 }
