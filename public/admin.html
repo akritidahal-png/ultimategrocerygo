@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GroceryGo — Admin Orders</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  body{font-family:'Poppins',sans-serif;background:#f6f9fb;margin:0;padding:18px}
+  .wrap{max-width:1100px;margin:0 auto}
+  header{background:#003893;color:white;padding:12px;border-radius:8px;margin-bottom:12px}
+  .search-row{display:flex;gap:8px;margin-bottom:12px}
+  input,select{padding:10px;border-radius:8px;border:1px solid #e5e7eb}
+  .orders{display:flex;flex-direction:column;gap:10px}
+  .order-card{background:white;padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.04)}
+  .order-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .items{margin-top:8px;font-size:14px;color:#374151}
+  .toggle-items{color:#2563eb;cursor:pointer;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h2 style="margin:0">Admin — Recent Orders</h2></header>
+
+  <div style="margin-bottom:8px" class="search-row">
+    <input id="q" placeholder="Search by customer name or mobile..." style="flex:1">
+    <select id="filter" style="width:160px">
+      <option value="all">All statuses</option>
+      <option value="paid">Paid</option>
+      <option value="pending">Pending</option>
+      <option value="failed">Failed</option>
+    </select>
+    <button id="refreshBtn" style="padding:10px;border-radius:8px;background:#003893;color:white;border:0">Refresh</button>
+  </div>
+
+  <div id="orders" class="orders">Loading orders…</div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const SUPABASE_URL = "https://gikdqaxdqfmzdvolkxbn.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const ordersEl = document.getElementById('orders');
+const qEl = document.getElementById('q');
+const filterEl = document.getElementById('filter');
+
+async function loadOrders() {
+  ordersEl.innerHTML = 'Loading…';
+  const status = filterEl.value;
+  try {
+    let query = supabase.from('orders').select('*').order('created_at',{ascending:false}).limit(200);
+    if (status !== 'all') query = query.eq('status', status);
+    const { data, error } = await query;
+    if (error) { ordersEl.innerHTML = 'Error fetching orders: ' + error.message; return; }
+    renderOrders(data || []);
+  } catch (err) {
+    ordersEl.innerHTML = 'Fetch error: ' + err.message;
+  }
+}
+
+function renderOrders(list) {
+  if (!list.length) { ordersEl.innerHTML = '<div class="order-card">No orders</div>'; return; }
+  ordersEl.innerHTML = '';
+  list.forEach(o => {
+    const card = document.createElement('div');
+    card.className = 'order-card';
+    let itemsHtml = '';
+    try {
+      const items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items || [];
+      itemsHtml = items.map(it => `<div>${it.name || 'item'} x${it.quantity || it.qty || 1} — $${((it.price||it.unit_price||0)*(it.quantity||it.qty||1)).toFixed(2)}</div>`).join('');
+    } catch(e) {
+      itemsHtml = '<div>Could not parse items</div>';
+    }
+    card.innerHTML = `
+      <div class="order-top">
+        <div>
+          <div><strong>#${o.order_number || (o.id||'')}</strong> — <span>${o.customer_name||o.name||''}</span></div>
+          <div class="small">${o.phone || o.email || ''} • ${o.created_at ? new Date(o.created_at).toLocaleString() : ''}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-weight:800">$${(o.total_amount||o.total||0).toString()}</div>
+          <div class="small">${o.status||''}</div>
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <div class="toggle-items" data-id="${o.id}">View items</div>
+        <div class="items" id="items-${o.id}" style="display:none">${itemsHtml}</div>
+      </div>
+    `;
+    ordersEl.appendChild(card);
+  });
+
+  // attach toggles
+  document.querySelectorAll('.toggle-items').forEach(t => {
+    t.onclick = (ev) => {
+      const id = ev.target.dataset.id;
+      const itemsDiv = document.getElementById('items-'+id);
+      if (!itemsDiv) return;
+      itemsDiv.style.display = itemsDiv.style.display === 'none' ? 'block' : 'none';
+      ev.target.textContent = itemsDiv.style.display === 'block' ? 'Hide items' : 'View items';
+    };
+  });
+}
+
+/* Search on input */
+qEl.addEventListener('input', async () => {
+  const q = qEl.value.trim().toLowerCase();
+  if (!q) { loadOrders(); return; }
+  // fetch recent 500 and filter client-side (simple)
+  try {
+    const { data } = await supabase.from('orders').select('*').order('created_at',{ascending:false}).limit(500);
+    const filtered = (data||[]).filter(o => {
+      const name = (o.customer_name||o.name||'').toString().toLowerCase();
+      const phone = (o.phone||'').toString();
+      return name.includes(q) || phone.includes(q) || (o.email||'').toString().toLowerCase().includes(q);
+    });
+    renderOrders(filtered);
+  } catch (err) {
+    ordersEl.innerHTML = 'Search failed: ' + err.message;
+  }
+});
+
+document.getElementById('refreshBtn').addEventListener('click', loadOrders);
+filterEl.addEventListener('change', loadOrders);
+
+loadOrders();
+</script>
+</body>
+</html>

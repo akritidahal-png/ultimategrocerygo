@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GroceryGo — Checkout</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+<!-- Stripe -->
+<script src="https://js.stripe.com/v3/"></script>
+<!-- Supabase client (creates window.supabase) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.js"></script>
+
+
+<style>
+  :root{
+    --brand:#003893;
+    --accent:#DC143C;
+    --bg:#f6f9fb;
+    --card:#fff;
+    --muted:#6b7280;
+    --success:#16a34a;
+  }
+  *{box-sizing:border-box}
+  body{font-family:'Poppins',sans-serif;margin:0;background:var(--bg);color:#111}
+  .wrap{max-width:720px;margin:18px auto;padding:14px}
+  header{background:linear-gradient(90deg,var(--accent),var(--brand));color:white;padding:16px;border-radius:8px;text-align:center;margin-bottom:14px}
+  .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(13, 27, 56, 0.06);margin-bottom:12px}
+  h1{margin:0;font-size:20px}
+  label{display:block;font-weight:600;margin:8px 0 6px}
+  input,select{width:100%;padding:10px;border-radius:8px;border:1px solid #e5e7eb;font-size:14px}
+  .row{display:flex;gap:8px}
+  .row .col{flex:1}
+  .small{font-size:13px;color:var(--muted)}
+  .muted{color:var(--muted)}
+  .summary-line{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f3f4f6}
+  .total-line{display:flex;justify-content:space-between;padding:10px 0;font-weight:800}
+  .pay-row{display:flex;gap:8px;margin-top:10px}
+  .pay-btn{flex:1;padding:12px;border-radius:8px;border:0;font-weight:700;cursor:pointer}
+  .pay-btn.card{background:#fbbf24;color:#111}
+  .pay-btn.apple{background:#000;color:#fff}
+  .pay-btn.google{background:#1a73e8;color:#fff}
+  #confirmBtn{display:block;width:100%;background:var(--brand);color:white;padding:12px;border-radius:10px;border:0;font-weight:800;margin-top:12px;cursor:pointer}
+  #confirmBtn[disabled]{opacity:0.55;cursor:not-allowed}
+  .otp-box{background:#fff7f7;border-radius:8px;padding:8px;margin-top:10px;border:1px solid #fee2e2;color:#b91c1c;font-weight:700;display:none}
+  footer{margin-top:20px;text-align:center;color:var(--muted);font-size:13px;padding:12px}
+  .error{color:#b91c1c;margin-top:6px}
+  @media (max-width:520px){ .row{flex-direction:column} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="card">
+    <h1>GroceryGo — Checkout</h1>
+    <div class="small" style="margin-top:6px">Fast, local delivery — orders processed during store hours (8am–4pm).</div>
+  </header>
+
+  <!-- CUSTOMER DETAILS -->
+  <div class="card">
+    <label>Full name</label>
+    <input id="name" type="text" placeholder="John Smith">
+
+    <div class="row" style="margin-top:8px">
+      <div class="col">
+        <label>Mobile</label>
+        <input id="mobile" type="text" placeholder="04xx xxx xxx">
+      </div>
+      <div class="col">
+        <label>Email</label>
+        <input id="email" type="email" placeholder="john@example.com">
+      </div>
+    </div>
+
+    <label style="margin-top:10px">Street address</label>
+    <input id="address" type="text" placeholder="Street address, unit # (optional)">
+
+    <div class="row" style="margin-top:8px">
+      <div class="col">
+        <label>Suburb</label>
+        <input id="suburb" type="text" placeholder="Suburb">
+      </div>
+      <div class="col">
+        <label>Postcode</label>
+        <input id="postcode" type="text" placeholder="e.g. 4000">
+      </div>
+      <div class="col">
+        <label>State</label>
+        <select id="state">
+          <option value="QLD" selected>Queensland</option>
+          <option value="NSW">New South Wales</option>
+          <option value="VIC">Victoria</option>
+          <option value="WA">Western Australia</option>
+          <option value="SA">South Australia</option>
+          <option value="TAS">Tasmania</option>
+          <option value="NT">Northern Territory</option>
+          <option value="ACT">Australian Capital Territory</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="postcodeMsg" class="error" style="display:none"></div>
+  </div>
+
+  <!-- DELIVERY SLOTS + SUMMARY -->
+  <div class="card">
+    <label>Delivery time slot</label>
+    <select id="slotSelect">
+      <option value="" disabled selected>Select a delivery slot</option>
+    </select>
+    <div class="small" style="margin-top:8px">First option in the list will be "Anytime" (not selected by default). Slots adjust by delivery zone (A/B/C) and availability (processing time and store hours considered).</div>
+
+    <div style="margin-top:14px" class="small"><strong>Order summary</strong></div>
+    <div class="summary-line"><div>Subtotal</div><div id="subtotalText">$0.00</div></div>
+    <div class="summary-line"><div>Delivery fee</div><div>$10.00</div></div>
+    <div class="total-line"><div>Total</div><div id="totalText">$0.00</div></div>
+  </div>
+
+  <!-- PAYMENT -->
+  <div class="card">
+    <div style="margin-bottom:10px">
+      <label>Card details</label>
+      <div id="card-element" style="padding:10px;border:1px solid #e5e7eb;border-radius:8px;background:white"></div>
+      <div id="cardErrors" class="error" style="margin-top:8px"></div>
+    </div>
+
+    <div id="prButtonMount" style="margin-top:8px"></div>
+
+    <div class="pay-row">
+      <button class="pay-btn card" id="payCardBtn">Pay with card</button>
+      <button class="pay-btn apple" id="payAppleBtn">Apple Pay</button>
+      <button class="pay-btn google" id="payGoogleBtn">Google Pay</button>
+    </div>
+
+ <div class="otp-box" id="otpBox">
+  <div>Test OTP: <span id="otpValue"></span></div>
+  <label>Enter OTP</label>
+  <input type="text" id="otpInput" placeholder="Enter OTP here">
+</div>
+
+
+    <button id="confirmBtn" disabled>Confirm Payment</button>
+
+    <div id="payMessage" class="small" style="margin-top:10px"></div>
+  </div>
+
+  <footer>© GroceryGo 2025 — Local delivery. All rights reserved.</footer>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const PUBLISHABLE_KEY = "pk_test_51SUX2cAtxwsqQt5Tf4eFuJC4uXKoauXjBAU5TiHC7MZnlR7rI6HIyHCMYJFeaCU7rSkQ4FBJD5q53QOw3DPKcOlg00VHp43m4l";
+const DELIVERY_FEE = 10.00;
+const MIN_PROCESS_HOURS = 8; // store needs at least 8 hours to process before a delivery slot
+
+/* Fully expanded serviceable postcodes list you provided earlier */
+const APPROVED_POSTCODES = [
+  4000,4005,4006,4007,4008,4009,4010,4011,4012,4013,4014,4017,4018,4025,4029,
+  4030,4031,4032,4034,4035,4036,4051,4053,4054,4055,4059,4060,4061,4064,4065,
+  4066,4067,4068,4069,4070,4072,4073,4074,4075,4076,4077,4078,4101,4102,4103,
+  4104,4105,4106,4107,4108,4109,4110,4111,4112,4113,4114,4115,4116,4117,4118,
+  4119,4120,4121,4122,4123,4124,4125,4127,4128,4129,4130,4132,4133,4151,4152,
+  4153,4154,4155,4156,4157,4158,4159,4160,4161,4163,4164,4165,4169,4170,4171,
+  4172,4173,4174,4178,4179,4183,4184,4205,4207,4280,4285,4300,4301,4303,4304,
+  4305,4306,4307,4308,4311,4340,4346,4500,4501,4502,4503,4504,4505,4506,4507,
+  4508,4509,4510,4511,4512,4513,4514,4515,4516,4517,4518,4519,4520,4521
+];
+
+/* For zones, we will split APPROVED_POSTCODES across 3 zones evenly for routing efficiency.
+   This avoids manually assigning many codes and keeps zones balanced.
+*/
+const ZONE_LABELS = ['A','B','C'];
+const ZONES = { A:[], B:[], C:[] };
+APPROVED_POSTCODES.forEach((pc, idx) => {
+  const zone = ZONE_LABELS[idx % 3]; // distribute round-robin
+  ZONES[zone].push(pc);
+});
+
+/* Base slot templates (5 slots) — will be used to generate per-day slots */
+const SLOT_TEMPLATES = ['8:00–11:00','11:00–14:00','14:00–17:00','17:00–19:00','19:00–21:00'];
+
+/* Shift templates per zone so each zone cycles differently (rotates templates)
+   Zone A: as-is, Zone B: rotate by 1, Zone C: rotate by 2
+*/
+const zoneTemplate = {
+  A: SLOT_TEMPLATES.slice(),
+  B: SLOT_TEMPLATES.slice(1).concat(SLOT_TEMPLATES.slice(0,1)),
+  C: SLOT_TEMPLATES.slice(2).concat(SLOT_TEMPLATES.slice(0,2))
+};
+
+/* ================= DOM ================= */
+const nameEl = document.getElementById('name');
+const mobileEl = document.getElementById('mobile');
+const emailEl = document.getElementById('email');
+const addressEl = document.getElementById('address');
+const suburbEl = document.getElementById('suburb');
+const postcodeEl = document.getElementById('postcode');
+const stateEl = document.getElementById('state');
+const slotSelect = document.getElementById('slotSelect');
+const subtotalText = document.getElementById('subtotalText');
+const totalText = document.getElementById('totalText');
+const payMessage = document.getElementById('payMessage');
+const otpBox = document.getElementById('otpBox');
+const otpValueSpan = document.getElementById('otpValue');
+const confirmBtn = document.getElementById('confirmBtn');
+const postcodeMsg = document.getElementById('postcodeMsg');
+
+/* ================= TROLLEY & SUMMARY ================= */
+const trolley = JSON.parse(localStorage.getItem('grocerygo_trolley') || '[]');
+const subtotalRaw = parseFloat(localStorage.getItem('grocerygo_subtotal') || '0') || 0;
+
+function renderSummary() {
+  subtotalText.textContent = `$${subtotalRaw.toFixed(2)}`;
+  totalText.textContent = `$${(subtotalRaw + DELIVERY_FEE).toFixed(2)}`;
+}
+renderSummary();
+
+/* ================= ZONE + SLOT GENERATION =================
+   We'll generate a list of available slots for the next 7 days.
+   Each option will be labeled like: "Mon 22 Sep — 8:00–11:00"
+   We enforce processing lead time: current time + MIN_PROCESS_HOURS must be before slot start.
+*/
+function getZoneForPostcode(pc) {
+  const p = parseInt(pc);
+  if (!p) return null;
+  for (const z of Object.keys(ZONES)) {
+    if (ZONES[z].includes(p)) return z;
+  }
+  return null;
+}
+
+function slotStartHourFromLabel(label) {
+  // "8:00–11:00" => 8
+  const parts = label.split('–')[0].split(':');
+  return parseInt(parts[0], 10);
+}
+
+// return date in local short form Mon 1 Feb
+function shortDate(d) {
+  return d.toLocaleDateString(undefined, { weekday:'short', day:'numeric', month:'short' });
+}
+
+function populateSlotsForPostcode(pc) {
+  slotSelect.innerHTML = '<option value="" disabled selected>Select a delivery slot</option>';
+  postcodeMsg.style.display = 'none';
+
+  const zone = getZoneForPostcode(pc);
+  if (!zone) {
+    postcodeMsg.style.display = 'block';
+    postcodeMsg.textContent = 'Sorry — delivery not available in your area.';
+    confirmBtn.disabled = true;
+    return;
+  }
+
+  // We'll create slots for next 7 days
+  const now = new Date();
+  const minTime = new Date(now.getTime() + MIN_PROCESS_HOURS * 3600 * 1000); // earliest dispatch-ready time
+  const slots = [];
+  for (let d = 0; d < 7; d++) {
+    const day = new Date();
+    day.setDate(now.getDate() + d);
+    const dayLabel = shortDate(day);
+    const template = zoneTemplate[zone];
+
+    // For each template slot, ensure that slotStart >= minTime for that day
+    template.forEach(slotLabel => {
+      const hourStart = slotStartHourFromLabel(slotLabel);
+      // Build a Date with this day's start hour
+      const slotStart = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hourStart, 0, 0);
+      // If slotStart is before minTime, skip (can't service that slot)
+      if (slotStart < minTime) return;
+      const optionText = `${dayLabel} — ${slotLabel}`;
+      slots.push({ text: optionText, value: `${day.toISOString().split('T')[0]}|${slotLabel}` });
+    });
+  }
+
+  // Always offer "Anytime (next available day)" as first real option but not selected by default
+  const anytimeOption = document.createElement('option');
+  anytimeOption.value = `anytime`;
+  anytimeOption.textContent = 'Anytime (next available)';
+  slotSelect.appendChild(anytimeOption);
+
+  if (slots.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'No slots available — try another day or contact support';
+    slotSelect.appendChild(opt);
+    confirmBtn.disabled = true;
+    postcodeMsg.style.display = 'block';
+    postcodeMsg.textContent = 'No delivery slots available in the required processing window. Try adjusting postcode or order earlier.';
+    return;
+  }
+
+  slots.forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.value;
+    o.textContent = s.text;
+    slotSelect.appendChild(o);
+  });
+
+  confirmBtn.disabled = false;
+  postcodeMsg.style.display = 'block';
+  postcodeMsg.style.color = 'green';
+  postcodeMsg.textContent = `Serviceable — Zone ${zone}. Choose a slot.`;
+}
+
+/* watch postcode input */
+postcodeEl.addEventListener('input', () => {
+  const pcVal = postcodeEl.value.trim();
+  if (!pcVal) {
+    slotSelect.innerHTML = '<option value="" disabled selected>Select a delivery slot</option>';
+    confirmBtn.disabled = true;
+    postcodeMsg.style.display = 'none';
+    return;
+  }
+  const pcNum = parseInt(pcVal);
+  if (!APPROVED_POSTCODES.includes(pcNum)) {
+    slotSelect.innerHTML = '<option value="">Delivery not available</option>';
+    confirmBtn.disabled = true;
+    postcodeMsg.style.display = 'block';
+    postcodeMsg.style.color = '#b91c1c';
+    postcodeMsg.textContent = 'Delivery not available in your area';
+    return;
+  }
+  populateSlotsForPostcode(pcNum);
+});
+
+/* ================= STRIPE ELEMENTS ================= */
+const stripe = Stripe(PUBLISHABLE_KEY);
+const elements = stripe.elements();
+const card = elements.create('card', { hidePostalCode: true });
+card.mount('#card-element');
+card.on('change', ev => {
+  document.getElementById('cardErrors').textContent = ev.error ? ev.error.message : '';
+});
+
+/* Payment Request Button (Apple/Google) */
+let paymentRequest;
+async function setupPaymentRequest() {
+  const amountCents = Math.round((subtotalRaw + DELIVERY_FEE) * 100);
+  paymentRequest = stripe.paymentRequest({
+    country: 'AU',
+    currency: 'aud',
+    total: { label: 'GroceryGo order', amount: amountCents },
+    requestPayerName: true,
+    requestPayerEmail: true,
+  });
+
+  const result = await paymentRequest.canMakePayment();
+  if (result) {
+    const prElement = elements.create('paymentRequestButton', { paymentRequest });
+    prElement.mount('#prButtonMount');
+    paymentRequest.on('paymentmethod', async ev => {
+      // create payment intent on server
+      const payload = await createPaymentIntent(amountCents, { method: 'payment_request' });
+      if (!payload || !payload.clientSecret) {
+        ev.complete('fail');
+        showMessage('Payment setup failed. Try card.');
+        return;
+      }
+      // Confirm the payment using the returned payment method
+      const { error, paymentIntent } = await stripe.confirmCardPayment(payload.clientSecret, { payment_method: ev.paymentMethod.id }, { handleActions: false });
+      if (error) {
+        ev.complete('fail');
+        showMessage(error.message || 'Payment failed');
+        return;
+      }
+      // If requires action:
+      if (paymentIntent.status === 'requires_action') {
+        const { error: actionError, paymentIntent: updated } = await stripe.confirmCardPayment(payload.clientSecret);
+        if (actionError) { ev.complete('fail'); showMessage(actionError.message || 'Action failed'); return; }
+        if (updated.status !== 'succeeded') { ev.complete('fail'); showMessage('Payment did not succeed'); return; }
+      }
+      ev.complete('success');
+      // success: save order and redirect
+      await saveOrderAndRedirect(paymentIntent.id);
+    });
+  } else {
+    // hide mount area if not available
+    document.getElementById('prButtonMount').style.display = 'none';
+  }
+}
+
+/* ---------------- Server call to create PaymentIntent ---------------- */
+async function createPaymentIntent(amountCents, metadata = {}) {
+  try {
+    const res = await fetch('/api/create-payment-intent', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ amount: Math.round(amountCents), metadata })
+    });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error('Payment intent creation failed: ' + txt);
+    }
+    return await res.json();
+  } catch (err) {
+    console.error(err);
+    showMessage('Error creating payment intent: ' + (err.message || err));
+    return null;
+  }
+}
+
+/* ================= OTP flow ================= */
+let currentOTP = null;
+function generateAndShowOTP() {
+  currentOTP = Math.floor(100000 + Math.random() * 900000).toString();
+  otpValueSpan.textContent = currentOTP;
+  otpBox.style.display = 'block';
+  showMessage('OTP displayed for testing (remove for production). Enter it then press Confirm Payment.');
+}
+
+/* ================= Final confirm flow (card) ================= */
+async function onConfirmPayment() {
+  // Basic validation
+  if (!nameEl.value.trim() || !mobileEl.value.trim() || !emailEl.value.trim()) {
+    showMessage('Please fill name, mobile and email.');
+    return;
+  }
+  if (!slotSelect.value) {
+    showMessage('Please choose a delivery slot.');
+    return;
+  }
+  // Check OTP (testing)
+const enteredOTP = document.getElementById('otpInput').value.trim();
+if (!enteredOTP) {
+  showMessage('Please enter the OTP.');
+  return;
+}
+if (enteredOTP !== currentOTP) {
+  showMessage('OTP invalid. Please check and try again.');
+  return;
+}
+
+
+  showMessage('Creating payment...');
+
+  // create payment intent
+  const amountCents = Math.round((subtotalRaw + DELIVERY_FEE) * 100);
+  const payload = await createPaymentIntent(amountCents, { customer_name: nameEl.value.trim() });
+  if (!payload || !payload.clientSecret) {
+    showMessage('Could not create payment.');
+    return;
+  }
+
+  // confirm card payment using elements
+  const { error, paymentIntent } = await stripe.confirmCardPayment(payload.clientSecret, {
+    payment_method: { card, billing_details: { name: nameEl.value.trim(), email: emailEl.value.trim(), phone: mobileEl.value.trim() } }
+  });
+
+  if (error) {
+    showMessage('Payment failed: ' + error.message);
+    return;
+  }
+
+  if (paymentIntent && paymentIntent.status === 'succeeded') {
+    showMessage('Payment succeeded. Saving order...');
+    await saveOrderAndRedirect(paymentIntent.id);
+  } else {
+    showMessage('Payment did not complete. Status: ' + (paymentIntent && paymentIntent.status));
+  }
+}
+function generateAndShowOTP() {
+  currentOTP = Math.floor(100000 + Math.random() * 900000).toString();
+  otpValueSpan.textContent = currentOTP;
+  document.getElementById('otpInput').value = ''; // clear previous input
+  otpBox.style.display = 'block';
+  showMessage('OTP displayed for testing (remove for production). Enter it then press Confirm Payment.');
+}
+
+/* ================= Save order & redirect ================= */
+async function saveOrderAndRedirect(stripePaymentId = null) {
+  // build order row consistent with your orders schema
+  const orderRow = {
+    customer_name: nameEl.value.trim(),
+    email: emailEl.value.trim(),
+    phone: mobileEl.value.trim(),
+    address_line1: addressEl.value.trim(),
+    suburb: suburbEl.value.trim(),
+    postcode: postcodeEl.value.trim(),
+    state: stateEl.value.trim(),
+    items: JSON.stringify(trolley),
+    total_amount: (subtotalRaw + DELIVERY_FEE).toFixed(2),
+    status: 'paid',
+    stripe_id: stripePaymentId,
+    delivery_fee: DELIVERY_FEE,
+    delivery_slot: slotSelect.value
+  };
+
+  try {
+    const { data, error } = await window.supabase.from('orders').insert([orderRow]).select().single();
+    if (error) {
+      console.error('Supabase insert error', error);
+      showMessage('Order saved failed (Supabase). Contact support.');
+      return;
+    }
+    // Clear local trolley
+    localStorage.removeItem('grocerygo_trolley');
+    localStorage.removeItem('grocerygo_subtotal');
+
+    // Redirect to success page with order id
+    const orderId = data.id || data.order_number || (data && data.id);
+    window.location.href = `success.html?order=${encodeURIComponent(orderId)}`;
+  } catch (err) {
+    console.error('Order post error', err);
+    showMessage('Could not save order. Contact support.');
+  }
+}
+
+/* ================= UI helpers ================= */
+function showMessage(msg) {
+  payMessage.textContent = msg || '';
+}
+
+/* ================= Init ================= */
+document.addEventListener('DOMContentLoaded', async () => {
+  // on load: render summary and set up stripe payment request
+  renderSummary();
+  setupPaymentRequest();
+
+  // Pre-generate OTP when user clicks any pay button (card/apple/google)
+  document.getElementById('payCardBtn').addEventListener('click', () => {
+    generateAndShowOTP();
+    confirmBtn.disabled = false;
+  });
+  document.getElementById('payAppleBtn').addEventListener('click', () => {
+    generateAndShowOTP();
+    confirmBtn.disabled = false;
+    // user will tap the PaymentRequest if available; otherwise fallback to confirm flow
+    showMessage('Tap Apple/Google Pay if available; otherwise press Confirm Payment to pay by card.');
+  });
+  document.getElementById('payGoogleBtn').addEventListener('click', () => {
+    generateAndShowOTP();
+    confirmBtn.disabled = false;
+    showMessage('Tap Apple/Google Pay if available; otherwise press Confirm Payment to pay by card.');
+  });
+
+  confirmBtn.addEventListener('click', onConfirmPayment);
+});
+</script>
+</body>
+</html>

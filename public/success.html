@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GroceryGo — Order Success</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  body{font-family:'Poppins',sans-serif;background:#f6f9fb;margin:0;padding:20px}
+  .wrap{max-width:720px;margin:40px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.06)}
+  h1{color:#0b5394}
+  .muted{color:#6b7280}
+  .order-id{font-weight:800;font-size:1.4rem;color:#0b5394}
+  pre{background:#f3f4f6;padding:10px;border-radius:8px;overflow:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Thanks — your order is confirmed</h1>
+  <p class="muted">We've received your order. Below is your order number and a short summary.</p>
+
+  <p>Order: <span id="orderId" class="order-id">LOADING...</span></p>
+
+  <div id="orderSummary" style="margin-top:10px">
+    <p class="muted">Order details:</p>
+    <pre id="orderJSON">Loading...</pre>
+  </div>
+
+  <p style="margin-top:12px"><a href="index.html">Back to home</a> — <a href="store.html">Continue shopping</a></p>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+const SUPABASE_URL = "https://gikdqaxdqfmzdvolkxbn.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const params = new URLSearchParams(window.location.search);
+const orderParam = params.get('order');
+const orderIdEl = document.getElementById('orderId');
+const orderJSON = document.getElementById('orderJSON');
+
+if (!orderParam) {
+  orderIdEl.textContent = 'No order ID found';
+  orderJSON.textContent = 'Order details unavailable';
+} else {
+  orderIdEl.textContent = orderParam;
+  // Try to fetch order details
+  (async () => {
+    try {
+      const { data, error } = await supabase.from('orders').select('*').or(`id.eq.${orderParam},order_number.eq.${orderParam}`).limit(1).single();
+      if (error) { orderJSON.textContent = JSON.stringify({note:'Could not fetch order', error: error.message}, null, 2); return; }
+      // Pretty-print items if it's JSON string
+      if (data.items && typeof data.items === 'string') {
+        try { data.items = JSON.parse(data.items); } catch(e) {}
+      }
+      orderJSON.textContent = JSON.stringify(data, null, 2);
+    } catch (err) {
+      orderJSON.textContent = JSON.stringify({note:'Fetch failed', error: err.message}, null, 2);
+    }
+  })();
+}
+</script>
+</body>
+</html>
