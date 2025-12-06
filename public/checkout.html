@@ -1,303 +1,41 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GroceryGo — Checkout</title>
+function generateSlots(){
+  const slotSelect = document.getElementById('slotSelect');
+  slotSelect.innerHTML = '<option value="">Select a delivery slot</option>'; // placeholder prompt
 
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  const pc = document.getElementById('postcode').value.trim();
+  const userZone = getZoneByPostcode(pc);
+  if(!userZone) return;
 
-  <!-- Stripe -->
-  <script src="https://js.stripe.com/v3/"></script>
-  <!-- Supabase client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.js"></script>
+  const now = new Date();
+  const earliest = new Date(now.getTime()+8*3600*1000); // 8-hour prep
+  let day = new Date();
+  let slotsAdded = 0;
 
-  <style>
-    :root {
-      --brand: #003893;
-      --accent: #DC143C;
-      --bg: #f6f9fb;
-      --card: #fff;
-      --muted: #6b7280;
-      --success: #16a34a;
-    }
-    * { box-sizing: border-box; }
-    body { font-family: 'Poppins', sans-serif; margin: 0; background: var(--bg); color: #111; }
-    .wrap { max-width: 720px; margin: 18px auto; padding: 14px; }
-    header { background: linear-gradient(90deg, var(--accent), var(--brand)); color: white; padding: 16px; border-radius: 8px; text-align: center; margin-bottom: 14px; }
-    .card { background: var(--card); padding: 14px; border-radius: 12px; box-shadow: 0 6px 18px rgba(13, 27, 56, 0.06); margin-bottom: 12px; }
-    h1 { margin: 0; font-size: 20px; }
-    label { display: block; font-weight: 600; margin: 8px 0 6px; }
-    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #e5e7eb; font-size: 14px; }
-    .row { display: flex; gap: 8px; }
-    .row .col { flex: 1; }
-    .small { font-size: 13px; color: var(--muted); }
-    .muted { color: var(--muted); }
-    .summary-line { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
-    .total-line { display: flex; justify-content: space-between; padding: 10px 0; font-weight: 800; }
-    .pay-row { display: flex; gap: 8px; margin-top: 10px; }
-    .pay-btn { flex: 1; padding: 12px; border-radius: 8px; border: 0; font-weight: 700; cursor: pointer; }
-    #confirmBtn { display: block; width: 100%; background: var(--brand); color: white; padding: 12px; border-radius: 10px; border: 0; font-weight: 800; margin-top: 12px; cursor: pointer; }
-    #confirmBtn[disabled] { opacity: 0.55; cursor: not-allowed; }
-    .error { color: #b91c1c; margin-top: 6px; }
-    footer { margin-top: 20px; text-align: center; color: var(--muted); font-size: 13px; padding: 12px; }
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <header class="card">
-      <h1>GroceryGo — Checkout</h1>
-      <div class="small" style="margin-top:6px">Fast, local delivery — orders processed during store hours (8am–4pm).</div>
-    </header>
+  // Add "Anytime" as first selectable slot
+  const anytimeOption = document.createElement('option');
+  anytimeOption.value = 'anytime';
+  anytimeOption.textContent = 'Anytime';
+  slotSelect.appendChild(anytimeOption);
 
-    <!-- CUSTOMER DETAILS -->
-    <div class="card">
-      <label>Full name</label>
-      <input id="name" type="text" placeholder="John Smith">
-
-      <div class="row" style="margin-top:8px">
-        <div class="col">
-          <label>Mobile</label>
-          <input id="mobile" type="text" placeholder="04xx xxx xxx">
-        </div>
-        <div class="col">
-          <label>Email</label>
-          <input id="email" type="email" placeholder="john@example.com">
-        </div>
-      </div>
-
-      <label style="margin-top:10px">Street address</label>
-      <input id="address" type="text" placeholder="Street address, unit # (optional)">
-
-      <div class="row" style="margin-top:8px">
-        <div class="col">
-          <label>Suburb</label>
-          <input id="suburb" type="text" placeholder="Suburb">
-        </div>
-        <div class="col">
-          <label>Postcode</label>
-          <input id="postcode" type="text" placeholder="e.g. 4000" onblur="validatePostcode()">
-        </div>
-        <div class="col">
-          <label>State</label>
-          <select id="state">
-            <option value="QLD" selected>Queensland</option>
-            <option value="NSW">New South Wales</option>
-            <option value="VIC">Victoria</option>
-            <option value="WA">Western Australia</option>
-            <option value="SA">South Australia</option>
-            <option value="TAS">Tasmania</option>
-            <option value="NT">Northern Territory</option>
-            <option value="ACT">Australian Capital Territory</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-   <script>
-  // Delivery postcode zones based on Logan, Ipswich, Brisbane, Redland Bay, and Moreton Bay
-  const zones = {
-    zone1: {
-      name: "Logan & Ipswich",
-      postcodes: [
-        '4000', '4005', '4006', '4007', '4008', '4009', '4010', '4011', '4012', '4013', '4014', 
-        '4017', '4018', '4025', '4029', '4030', '4031', '4032', '4034', '4035', '4036', '4051', 
-        '4053', '4054', '4055', '4059', '4060', '4061', '4064', '4065', '4066', '4067', '4068', 
-        '4069', '4070', '4072', '4073', '4074', '4075', '4076', '4077', '4078'
-      ],
-      slots: ['8:00 AM - 12:00 PM', '12:00 PM - 4:00 PM', '4:00 PM - 7:00 PM']
-    },
-    zone2: {
-      name: "Brisbane & Redland Bay",
-      postcodes: [
-        '4300', '4301', '4303', '4304', '4305', '4306', '4307', '4308', '4311', '4340', '4346', 
-        '4500', '4501', '4502', '4503', '4504', '4505', '4506', '4507', '4508', '4509', '4510'
-      ],
-      slots: ['8:00 AM - 12:00 PM', '12:00 PM - 4:00 PM', '4:00 PM - 7:00 PM']
-    },
-    zone3: {
-      name: "Moreton Bay",
-      postcodes: [
-        '4501', '4502', '4503', '4504', '4505', '4506', '4507', '4508', '4509', '4510', '4511', 
-        '4512', '4513', '4514', '4515', '4516', '4517', '4518', '4519', '4520', '4521'
-      ],
-      slots: ['8:00 AM - 12:00 PM', '12:00 PM - 4:00 PM', '4:00 PM - 7:00 PM']
-    }
-  };
-
-  // Function to validate postcode and display available delivery slots
-  function validatePostcode() {
-    const postcode = document.getElementById('postcode').value.trim();
-    let zone = null;
-
-    // Determine zone based on postcode
-    for (let key in zones) {
-      if (zones[key].postcodes.includes(postcode)) {
-        zone = zones[key];
-        break;
-      }
-    }
-
-    const slotSelect = document.getElementById('slotSelect');
-    const confirmBtn = document.getElementById('confirmBtn');
-    const postcodeMsg = document.getElementById('postcodeMsg');
-
-    if (zone) {
-      // Populate slots for the detected zone
-      slotSelect.innerHTML = zone.slots.map(slot => `<option value="${slot}">${slot}</option>`).join('');
-      slotSelect.disabled = false;
-      confirmBtn.disabled = false;
-      showMessage(`Delivery available in ${zone.name}. Select a time slot.`);
-    } else {
-      slotSelect.innerHTML = '<option value="" disabled selected>No delivery slots available for this postcode</option>';
-      slotSelect.disabled = true;
-      confirmBtn.disabled = true;
-      showMessage('Sorry, delivery is not available in your area. Please check your postcode.');
-    }
-  }
-
-  // Helper function to display messages to the user
-  function showMessage(msg) {
-    document.getElementById('postcodeMsg').style.display = 'block';
-    document.getElementById('postcodeMsg').textContent = msg;
-  }
-
-  // Event listener to trigger postcode validation
-  document.getElementById('postcode').addEventListener('input', validatePostcode);
-</script>
-tal-line"><div>Total</div><div id="totalText">$0.00</div></div>
-    </div>
-
-    <!-- PAYMENT -->
-    <div class="card">
-      <div style="margin-bottom:10px">
-        <label>Card details</label>
-        <div id="card-element" style="padding:10px;border:1px solid #e5e7eb;border-radius:8px;background:white"></div>
-        <div id="cardErrors" class="error" style="margin-top:8px"></div>
-      </div>
-
-      <button id="confirmBtn" disabled>Confirm Payment</button>
-
-      <div id="payMessage" class="small" style="margin-top:10px"></div>
-    </div>
-
-    <footer>© GroceryGo 2025 — Local delivery. All rights reserved.</footer>
-  </div>
-
-  <script>
-    // Configurations
-    const PUBLISHABLE_KEY = "pk_test_51SUX2cAtxwsqQt5Tf4eFuJC4uXKoauXjBAU5TiHC7MZnlR7rI6HIyHCMYJFeaCU7rSkQ4FBJD5q53QOw3DPKcOlg00VHp43m4l";
-    const DELIVERY_FEE = 10.00;
-    
-    // Get trolley data from localStorage
-    const trolley = JSON.parse(localStorage.getItem('grocerygo_trolley') || '[]');
-    const subtotalRaw = parseFloat(localStorage.getItem('grocerygo_subtotal') || '0') || 0;
-
-    // Display Subtotal and Total
-    const subtotalText = document.getElementById('subtotalText');
-    const totalText = document.getElementById('totalText');
-    subtotalText.textContent = `$${subtotalRaw.toFixed(2)}`;
-    totalText.textContent = `$${(subtotalRaw + DELIVERY_FEE).toFixed(2)}`;
-
-    // Setup Stripe
-    const stripe = Stripe(PUBLISHABLE_KEY);
-    const elements = stripe.elements();
-    const card = elements.create('card', { hidePostalCode: true });
-    card.mount('#card-element');
-    
-    // Handle postcode input and validate delivery slots
-    const validPostcodes = ['4000', '4217', '4551', '2000']; // Example of valid postcodes
-    const slotSelect = document.getElementById('slotSelect');
-
-    function validatePostcode() {
-      const postcode = document.getElementById('postcode').value.trim();
-      if (validPostcodes.includes(postcode)) {
-        populateSlots(postcode);
-      } else {
-        slotSelect.innerHTML = '<option value="" disabled selected>No delivery slots available for this postcode</option>';
-        slotSelect.disabled = true;
-      }
-    }
-
-    function populateSlots(postcode) {
-      // Here, we just return a list of 3 time slots for simplicity
-      const slots = ['10:00 AM - 12:00 PM', '12:00 PM - 02:00 PM', '02:00 PM - 04:00 PM'];
-      slotSelect.innerHTML = slots.map(slot => `<option value="${slot}">${slot}</option>`).join('');
-      slotSelect.disabled = false;
-    }
-
-    // Handle Confirm Payment
-    async function createPaymentIntent(amountCents) {
-      try {
-        const res = await fetch('/api/create-payment-intent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: amountCents })
-        });
-        if (!res.ok) throw new Error('Failed to create payment intent');
-        return await res.json();
-      } catch (error) {
-        console.error(error);
-        showMessage('Error creating payment intent.');
-      }
-    }
-
-    async function confirmPayment(clientSecret) {
-      const name = document.getElementById('name').value.trim();
-      const email = document.getElementById('email').value.trim();
-      
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
-        payment_method: {
-          card,
-          billing_details: { name, email }
+  while(slotsAdded < 6){ // generate six slots
+    if(day.getDay()!==0){ // skip Sundays
+      const rotation = DAYS_ROTATION[(day.getDay()-1)%DAYS_ROTATION.length]; // rotate days
+      for(let i=0;i<3;i++){
+        if(rotation[i]===userZone){
+          const time = TIME_BLOCKS[i];
+          const slotDate = new Date(day);
+          const slotStartHour = parseInt(time.split(':')[0]);
+          slotDate.setHours(slotStartHour,0,0,0);
+          if(slotDate>=earliest && slotsAdded<6){
+            const option = document.createElement('option');
+            option.value = `${day.toISOString().slice(0,10)}|${time}`;
+            option.textContent = `${day.toDateString()} — ${time}`;
+            slotSelect.appendChild(option);
+            slotsAdded++;
+          }
         }
-      });
-
-      if (error) {
-        document.getElementById('cardErrors').textContent = error.message;
-        return;
-      }
-
-      if (paymentIntent.status === 'succeeded') {
-        showMessage('Payment succeeded. Saving order...');
-        await saveOrder(paymentIntent.id);
       }
     }
-
-    async function saveOrder(paymentIntentId) {
-      const orderRow = {
-        customer_name: document.getElementById('name').value,
-        email: document.getElementById('email').value,
-        items: JSON.stringify(trolley),
-        total_amount: subtotalRaw + DELIVERY_FEE,
-        payment_intent: paymentIntentId
-      };
-
-      const { data, error } = await window.supabase.from('orders').insert([orderRow]).select().single();
-      if (error) {
-        console.error('Supabase insert error', error);
-        showMessage('Order save failed (Supabase). Contact support.');
-        return;
-      }
-
-      console.log('Order saved successfully', data);
-      window.location.href = `success.html?order=${encodeURIComponent(data.id)}`;
-    }
-
-    function showMessage(message) {
-      const msgEl = document.getElementById('payMessage');
-      msgEl.textContent = message;
-    }
-
-    // Handle Confirm Payment Button
-    const confirmBtn = document.getElementById('confirmBtn');
-    confirmBtn.addEventListener('click', async () => {
-      confirmBtn.disabled = true;
-      const amountCents = (subtotalRaw + DELIVERY_FEE) * 100;
-      const { clientSecret } = await createPaymentIntent(amountCents);
-      await confirmPayment(clientSecret);
-    });
-  </script>
-</body>
-</html>
-
+    day.setDate(day.getDate()+1);
+  }
+}
