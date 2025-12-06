@@ -1,19 +1,13 @@
+import Stripe from "stripe";
+import supabase from "../SupabaseClient.js";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
+
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    let body;
-    if (req.headers["content-type"]?.includes("application/json")) {
-      body = await new Promise((resolve, reject) => {
-        let data = "";
-        req.on("data", chunk => data += chunk);
-        req.on("end", () => resolve(JSON.parse(data)));
-        req.on("error", err => reject(err));
-      });
-    } else {
-      body = req.body; // fallback
-    }
-
+    const body = req.body;
     const { trolley, customer } = body;
 
     if (!Array.isArray(trolley) || trolley.length === 0)
