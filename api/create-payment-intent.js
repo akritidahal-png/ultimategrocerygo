@@ -8,45 +8,39 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// Determine the base URL dynamically based on the environment
-const BASE_URL = process.env.NODE_ENV === "production"
-  ? process.env.NEXT_PUBLIC_API_URL // This will be set to your Vercel URL in production
-  : "http://localhost:3000"; // Local URL for development
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { amount, name, email, trolley } = req.body;
+  const { trolley, total_amount, delivery_fee, customer, delivery_slot } = req.body;
 
-  // Validate incoming data
-  if (!amount || !name || !email || !Array.isArray(trolley) || trolley.length === 0) {
-    return res.status(400).json({ error: "Missing required fields" });
+  // Validate required fields
+  if (!trolley || !Array.isArray(trolley) || trolley.length === 0) {
+    return res.status(400).json({ error: "Trolley is empty" });
+  }
+  if (!total_amount || !customer || !customer.name || !customer.email) {
+    return res.status(400).json({ error: "Missing customer or total info" });
   }
 
   try {
-    // Save order to Supabase before payment
-    const { data: orderData, error: orderError } = await supabase
-      .from("orders")
-      .insert([{ name, email, trolley, amount }])
-      .select()
-      .single();
-
-    if (orderError) throw new Error(`Supabase order creation failed: ${orderError.message}`);
-
-    // Create the payment intent in Stripe
+    // Create Stripe payment intent
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100),  // Convert amount to cents
+      amount: Math.round(total_amount * 100), // cents
       currency: "aud",
       payment_method_types: ["card"],
-      metadata: { order_id: orderData.id },
+      receipt_email: customer.email,
+      metadata: {
+        customer_name: customer.name,
+        customer_email: customer.email,
+        delivery_slot: delivery_slot || "N/A"
+      }
     });
 
-    // Send the client secret to frontend for Stripe.js to complete the payment
+    // Return client secret for frontend
     res.status(200).json({ clientSecret: paymentIntent.client_secret });
   } catch (err) {
-    console.error("Payment creation error:", err);
-    res.status(500).json({ error: `Payment creation failed: ${err.message || "Unknown error"}` });
+    console.error("Stripe payment intent error:", err);
+    res.status(500).json({ error: err.message || "Payment intent creation failed" });
   }
 }
