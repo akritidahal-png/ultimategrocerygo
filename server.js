@@ -87,7 +87,14 @@ app.post('/api/stripe-webhook', bodyParser.raw({type:'application/json'}), async
 app.post('/api/create-payment-intent', async (req,res)=>{
     try {
         const { trolley, customer } = req.body;
+        
+        // 1. Check for empty trolley
         if(!trolley || trolley.length===0) return res.status(400).json({ error:'Trolley is empty' });
+        
+        // 2. 🔥 FIX: Check if customer data is missing before destructuring
+        if (!customer) {
+            return res.status(400).json({ error: 'Missing required customer data.' });
+        }
 
         const { name,email,mobile,address,suburb,state,postcode,deliverySlot } = customer;
         const deliveryFee = getDeliveryFee(postcode);
@@ -103,6 +110,16 @@ app.post('/api/create-payment-intent', async (req,res)=>{
             automatic_payment_methods:{ enabled:true },
             metadata:{ customer_name:name,email }
         });
+
+        // Assuming you return the client secret to the client
+        res.status(200).json({ clientSecret: paymentIntent.client_secret });
+
+    } catch (error) {
+        // Essential for debugging: Log the real error to your Vercel logs
+        console.error('Payment Intent Error:', error); 
+        res.status(500).json({ error: error.message });
+    }
+});
 
         // Generate order number
         let orderNumber;
@@ -148,3 +165,4 @@ if(process.env.NODE_ENV!=='production' && !process.env.VERCEL){
 }
 
 module.exports = app;
+
