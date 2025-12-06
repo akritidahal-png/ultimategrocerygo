@@ -282,72 +282,101 @@ const cardExpiry = elements.create('cardExpiry'); cardExpiry.mount('#cardExpiry'
 const cardCVC = elements.create('cardCvc'); cardCVC.mount('#cardCVC');
 
 // ---------------- Payment ----------------
-document.getElementById('payBtn').addEventListener('click', async ()=>{
-  const payBtn = document.getElementById('payBtn'); payBtn.disabled=true;
-  const {subtotal,deliveryFee,total} = updateTotals();
-  const customer={
-    name:document.getElementById('name').value.trim(),
-    mobile:document.getElementById('mobile').value.trim(),
-    email:document.getElementById('email').value.trim(),
-    unit:document.getElementById('unit').value.trim(),
-    streetNo:document.getElementById('streetNo').value.trim(),
-    streetName:document.getElementById('streetName').value.trim(),
-    suburb:document.getElementById('suburb').value.trim(),
-    postcode:document.getElementById('postcode').value.trim(),
-    state:document.getElementById('state').value
+document.getElementById('payBtn').addEventListener('click', async () => {
+  const payBtn = document.getElementById('payBtn');
+  payBtn.disabled = true;
+  const { subtotal, deliveryFee, total } = updateTotals();
+
+  const customer = {
+    name: document.getElementById('name').value.trim(),
+    mobile: document.getElementById('mobile').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    unit: document.getElementById('unit').value.trim(),
+    streetNo: document.getElementById('streetNo').value.trim(),
+    streetName: document.getElementById('streetName').value.trim(),
+    suburb: document.getElementById('suburb').value.trim(),
+    postcode: document.getElementById('postcode').value.trim(),
+    state: document.getElementById('state').value
   };
   const slot = slotSelect.value;
 
-  try{
-    // Payment Intent
-    const piResp = await fetch(CREATE_PAYMENT_INTENT_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({amount_cents:Math.round(total*100),currency:'aud',receipt_email:customer.email})
-    });
-    const piJson = await piResp.json();
-    if(!piResp.ok) throw new Error(piJson.error||'Payment intent creation failed');
-    const clientSecret = piJson.clientSecret;
-
-    // Confirm payment
-    const confirm = await stripe.confirmCardPayment(clientSecret,{
-      payment_method:{card:cardNumber,billing_details:{name:customer.name,email:customer.email,phone:customer.mobile,address:{line1:customer.streetNo,city:customer.suburb,postal_code:customer.postcode,state:customer.state}}}
-    });
-    if(confirm.error){document.getElementById('payMessage').textContent=confirm.error.message;payBtn.disabled=false;return;}
-
-    // Create order
-    const createResp = await fetch(CREATE_ORDER_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        order_number_prefix:'GG',
-        customer_name:customer.name,
-        email:customer.email,
-        phone:customer.mobile,
-        address_line1:`${customer.unit?customer.unit+'/':''}${customer.streetNo} ${customer.streetName}`,
-        suburb:customer.suburb,
-        postcode:customer.postcode,
-        state:customer.state,
-        country:'Australia',
-        items:trolley,
-        total_amount:total,
-        delivery_fee:deliveryFee,
-        stripe_id:confirm.paymentIntent?.id,
-        stripe_status:confirm.paymentIntent?.status,
-        delivery_slot:slot
+  try {
+    // Send correct data to backend
+    const piResp = await fetch(CREATE_PAYMENT_INTENT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: total,          // <-- match backend
+        name: customer.name,    // <-- match backend
+        email: customer.email,  // <-- match backend
+        trolley: trolley        // <-- match backend
       })
     });
+
+    const piJson = await piResp.json();
+    if (!piResp.ok) throw new Error(piJson.error || 'Payment intent creation failed');
+
+    const clientSecret = piJson.clientSecret;
+
+    const confirm = await stripe.confirmCardPayment(clientSecret, {
+      payment_method: {
+        card: cardNumber,
+        billing_details: {
+          name: customer.name,
+          email: customer.email,
+          phone: customer.mobile,
+          address: {
+            line1: customer.streetNo,
+            city: customer.suburb,
+            postal_code: customer.postcode,
+            state: customer.state
+          }
+        }
+      }
+    });
+
+    if (confirm.error) {
+      document.getElementById('payMessage').textContent = confirm.error.message;
+      payBtn.disabled = false;
+      return;
+    }
+
+    // Save order after payment
+    const createResp = await fetch(CREATE_ORDER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_number_prefix: 'GG',
+        customer_name: customer.name,
+        email: customer.email,
+        phone: customer.mobile,
+        address_line1: `${customer.unit ? customer.unit + '/' : ''}${customer.streetNo} ${customer.streetName}`,
+        suburb: customer.suburb,
+        postcode: customer.postcode,
+        state: customer.state,
+        country: 'Australia',
+        items: trolley,
+        total_amount: total,
+        delivery_fee: deliveryFee,
+        stripe_id: confirm.paymentIntent?.id,
+        stripe_status: confirm.paymentIntent?.status,
+        delivery_slot: slot
+      })
+    });
+
     const createJson = await createResp.json();
-    if(!createResp.ok) throw new Error(createJson.error||'Order creation failed');
+    if (!createResp.ok) throw new Error(createJson.error || 'Order creation failed');
 
     localStorage.setItem('lastOrderNumber', createJson.order_number || `GG-${Date.now()}`);
-    window.location.href='success.html';
+    window.location.href = 'success.html';
 
-  }catch(err){
-    document.getElementById('payMessage').textContent=err.message;
-    payBtn.disabled=false;
+  } catch (err) {
+    document.getElementById('payMessage').textContent = err.message;
+    payBtn.disabled = false;
   }
 });
+
 </script>
 </body>
 </html>
+
