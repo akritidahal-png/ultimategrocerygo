@@ -1,5 +1,6 @@
 import Stripe from "stripe";
-import { supabase } from "../supabaseClient.js";
+import supabase from "../SupabaseClient.js";
+
 import { buffer } from "micro";
 
 export const config = { api: { bodyParser: false } };
