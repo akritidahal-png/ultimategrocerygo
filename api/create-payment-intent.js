@@ -1,14 +1,20 @@
-import Stripe from "stripe";
-import supabase from "../SupabaseClient.js";
-
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
-
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
-    const { trolley, customer } = req.body;
+    let body;
+    if (req.headers["content-type"]?.includes("application/json")) {
+      body = await new Promise((resolve, reject) => {
+        let data = "";
+        req.on("data", chunk => data += chunk);
+        req.on("end", () => resolve(JSON.parse(data)));
+        req.on("error", err => reject(err));
+      });
+    } else {
+      body = req.body; // fallback
+    }
+
+    const { trolley, customer } = body;
 
     if (!Array.isArray(trolley) || trolley.length === 0)
       return res.status(400).json({ error: "Trolley is empty" });
@@ -16,13 +22,11 @@ export default async function handler(req, res) {
     if (!customer || !customer.name || !customer.email)
       return res.status(400).json({ error: "Missing customer data" });
 
-    // Calculate totals
     const subtotal = trolley.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 1), 0);
     const deliveryFee = subtotal >= 120 ? 0 : 10;
     const grandTotal = subtotal + deliveryFee;
     const amountInCents = Math.round(grandTotal * 100);
 
-    // Create payment intent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: "aud",
@@ -36,4 +40,3 @@ export default async function handler(req, res) {
     res.status(500).json({ error: err.message || "Server error" });
   }
 }
-
