@@ -1,5 +1,3 @@
-// api/stripe-webhook.js (FINAL, SECURE VERSION)
-
 import Stripe from "stripe";
 import supabase from "../SupabaseClient.js"; // Ensure this client uses the Service Role Key
 
