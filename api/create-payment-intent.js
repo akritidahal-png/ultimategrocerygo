@@ -1,37 +1,35 @@
-import Stripe from "stripe";
-import { createClient } from "@supabase/supabase-js";
+const express = require('express');
+const router = express.Router();
+const Stripe = require('stripe');
+const { createClient } = require('@supabase/supabase-js');
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+const stripe = Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-
+router.post('/create-payment-intent', async (req, res) => {
   try {
     const { trolley, customer } = req.body;
 
-    if (!Array.isArray(trolley) || trolley.length === 0) 
-      return res.status(400).json({ error: "Trolley is empty" });
+    if (!trolley || trolley.length === 0) return res.status(400).json({ error: 'Trolley is empty' });
+    if (!customer) return res.status(400).json({ error: 'Missing customer data' });
 
-    if (!customer || !customer.name || !customer.email)
-      return res.status(400).json({ error: "Missing required customer info" });
-
-    // Calculate subtotal and delivery fee
-    const subtotal = trolley.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0);
+    const subtotal = trolley.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 1), 0);
     const deliveryFee = subtotal >= 120 ? 0 : 10;
-    const totalAmount = subtotal + deliveryFee;
+    const total = subtotal + deliveryFee;
+    const amount = Math.round(total * 100);
 
-    // Create Stripe Payment Intent
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(totalAmount * 100),
-      currency: "aud",
+      amount,
+      currency: 'aud',
       automatic_payment_methods: { enabled: true },
-      metadata: { customer_name: customer.name, email: customer.email }
+      metadata: { customer_name: customer.name || 'Anonymous', email: customer.email || '' }
     });
 
-    res.status(200).json({ clientSecret: paymentIntent.client_secret, totalAmount, deliveryFee });
+    res.status(200).json({ clientSecret: paymentIntent.client_secret });
   } catch (err) {
-    console.error("Payment Intent Error:", err);
-    res.status(500).json({ error: "Failed to create payment intent" });
+    console.error('Payment Intent Error:', err);
+    res.status(500).json({ error: err.message });
   }
-}
+});
+
+module.exports = router;
