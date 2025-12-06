@@ -1,3 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>GroceryGo | Checkout</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary-color:#DC143C;
+  --secondary-color:#003893;
+  --highlight-color:#FFD700;
+  --bg-color:#f8f9fa;
+  --text-color:#222;
+  --border-color:#ddd;
+  --nepali-blue:#003893;
+}
+*{box-sizing:border-box;}
+body{font-family:'Poppins',sans-serif;margin:0;background:var(--bg-color);color:var(--text-color);line-height:1.6;}
+header{background:linear-gradient(to right,var(--primary-color),var(--secondary-color));color:#fff;padding:15px 10px 5px 10px;text-align:center;position:sticky;top:0;z-index:1000;}
+header h1{margin:0;font-size:30px;font-weight:900;display:flex;justify-content:center;align-items:center;height:60px;}
+.logo-container{display:flex;align-items:center;position:relative;padding-left:10px}
+.logo-trolley-g{font-size:55px;color:white;font-weight:900;line-height:1;position:relative;padding-right:2px;text-shadow:1px 1px 0 var(--primary-color),2px 2px 2px rgba(0,0,0,0.5)}
+.logo-grocery-text{position:absolute;top:-4px;left:10px;font-size:14px;font-weight:700;color:#FF8C00;letter-spacing:0.5px;white-space:nowrap;text-shadow:0 0 1px rgba(0,0,0,0.4);z-index:10;transform:rotate(-5deg);padding:2px 4px;background:rgba(255,255,255,0.1);border-radius:3px}
+.logo-o{font-size:55px;color:white;font-weight:900;line-height:1;text-shadow:1px 1px 0 var(--primary-color),2px 2px 2px rgba(0,0,0,0.5);transform:translateX(-5px) rotate(2deg);position:relative;z-index:5}
+nav{margin-top:5px}
+nav a{color:white;text-decoration:none;margin:0 10px;font-weight:600;font-size:14px;padding:5px 0;display:inline-block}
+nav a:hover{text-decoration:underline}
+.container{width:95%;max-width:1200px;margin:20px auto;padding:10px;display:flex;flex-direction:column;gap:20px;}
+.panel{background:white;padding:15px;border-radius:8px;margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,0.06);}
+.heading{font-weight:700;margin-bottom:10px;font-size:1.1em}
+.row{display:flex;gap:10px;flex-wrap:wrap;}
+.col{flex:1;display:flex;flex-direction:column;}
+input, select{padding:8px;border:1px solid #ccc;border-radius:6px;font-size:1em;width:100%;}
+input:focus, select:focus{outline:none;border-color:var(--primary-color);}
+.small{font-size:0.85em;color:#555;margin-top:4px;}
+.summary-item{display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #eee;font-weight:600;}
+.total-item{font-size:1.1em;display:flex;justify-content:space-between;padding:6px 0;border-top:2px solid #ccc;font-weight:700;}
+.error{color:red;font-size:0.8em;display:none;}
+.btn{padding:10px 15px;border:none;border-radius:6px;background:var(--primary-color);color:white;font-weight:700;cursor:pointer}
+.btn[disabled]{opacity:0.6;cursor:not-allowed}
+.btn.secondary{background:var(--nepali-blue);margin-left:5px}
+#paySection{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:15px;}
+#paySection button{flex:1;}
+#backTrolleyBtn{background:var(--nepali-blue);}
+footer{background:var(--nepali-blue);color:white;text-align:center;padding:15px 0;font-size:14px;margin-top:40px;}
+@media(max-width:768px){.row{flex-direction:column;}.container{flex-direction:column;}}
+</style>
+</head>
+<body>
+<header>
+<h1>
+<div class="logo-container">
+<span class="logo-trolley-g">G<span class="logo-grocery-text">Grocery</span></span>
+<span class="logo-o">o</span>
+</div>
+</h1>
+<nav>
+<a href="index.html">HOME</a>
+<a href="store.html">STORE</a>
+<a href="about.html">ABOUT US</a>
+<a href="contact.html">CONTACT</a>
+</nav>
+</header>
+
+<div class="container">
+  <!-- Customer details -->
+  <div class="panel">
+    <div class="heading">Customer details</div>
+    <label for="name">Full name</label>
+    <input id="name" autocomplete="name" placeholder="John Smith">
+    <div class="row">
+      <div class="col">
+        <label for="mobile">Mobile</label>
+        <input id="mobile" autocomplete="tel" placeholder="04xx xxx xxx">
+      </div>
+      <div class="col">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="email" placeholder="john@example.com">
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <label for="unit">Unit # (optional)</label>
+        <input id="unit" placeholder="Unit #">
+      </div>
+      <div class="col">
+        <label for="streetNo">Street No.</label>
+        <input id="streetNo" placeholder="123">
+      </div>
+      <div class="col">
+        <label for="streetName">Street Name</label>
+        <input id="streetName" placeholder="Main St">
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <label for="suburb">Suburb</label>
+        <input id="suburb" placeholder="Suburb">
+      </div>
+      <div class="col">
+        <label for="postcode">Postcode</label>
+        <input id="postcode" placeholder="e.g. 4000">
+        <div id="postcodeError" class="error">Sorry, we do not deliver to this postcode.</div>
+      </div>
+      <div class="col">
+        <label for="state">State</label>
+        <select id="state">
+          <option value="QLD" selected>Queensland</option>
+          <option value="NSW">New South Wales</option>
+          <option value="VIC">Victoria</option>
+          <option value="WA">Western Australia</option>
+          <option value="SA">South Australia</option>
+          <option value="TAS">Tasmania</option>
+          <option value="NT">Northern Territory</option>
+          <option value="ACT">Australian Capital Territory</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delivery slot -->
+  <div class="panel">
+    <div class="heading">Delivery slot</div>
+    <label for="slotSelect">Choose a delivery slot</label>
+    <select id="slotSelect" disabled>
+      <option value="">Enter postcode to see available slots</option>
+    </select>
+    <div class="small">Warehouse packs 08:00–16:00. Earliest slot respects an 8-hour handling rule. (Mon–Sat)</div>
+  </div>
+
+  <!-- Order summary -->
+  <div class="panel">
+    <div class="heading">Order summary</div>
+    <div class="summary-item"><div>Subtotal</div><div id="subtotalText">$0.00</div></div>
+    <div class="summary-item"><div>Delivery fee</div><div id="deliveryFeeText">$0.00</div></div>
+    <div class="total-item"><div>Total</div><div id="totalText">$0.00</div></div>
+  </div>
+
+  <!-- Payment -->
+  <div class="panel">
+    <div class="heading">Payment</div>
+    <label for="cardName">Name on card</label>
+    <input id="cardName" placeholder="John Smith">
+    <label for="cardNumber">Card number</label>
+    <input id="cardNumber" placeholder="1234 5678 9012 3456">
+    <div class="row">
+      <div class="col">
+        <label for="cardExpiry">Expiry</label>
+        <input id="cardExpiry" placeholder="MM/YY">
+      </div>
+      <div class="col">
+        <label for="cardCVC">CVC</label>
+        <input id="cardCVC" placeholder="123">
+      </div>
+    </div>
+    <div id="paySection">
+      <button id="payBtn" class="btn" disabled>Complete Payment</button>
+      <button id="backTrolleyBtn" class="btn secondary">Back to Trolley</button>
+    </div>
+    <div id="payMessage" class="small"></div>
+  </div>
+</div>
+
+<footer>
+© 2025 GroceryGo
+</footer>
+
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+// ---------------- CONFIG ----------------
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_51SUX2cAtxwsqQt5Tf4eFuJC4uXKoauXjBAU5TiHC7MZnlR7rI6HIyHCMYJFeaCU7rSkQ4FBJD5q53QOw3DPKcOlg00VHp43m4l';
+const CREATE_PAYMENT_INTENT_URL = '/api/create-payment-intent';
+const CREATE_ORDER_URL = '/api/create-order';
+const NOTIFY_ADMIN_URL = '/api/notify-admin';
+
+// Approved postcodes
+const approvedPostcodes = ["4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018","4025","4029","4030","4031","4032","4034","4035","4036","4051","4053","4054","4055","4059","4060","4061","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075","4076","4077","4078","4101","4102","4103","4104","4105","4106","4107","4108","4109","4110","4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123","4124","4125","4127","4128","4129","4130","4132","4133","4151","4152","4153","4154","4155","4156","4157","4158","4159","4160","4161","4163","4164","4165","4169","4170","4171","4172","4173","4174","4178","4179","4183","4184","4205","4207","4280","4285","4300","4301","4303","4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504","4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517","4518","4519","4520","4521"];
+
+// Divide postcodes into 3 zones sequentially to maintain smooth delivery flow
+const ZONES = {
+  1: approvedPostcodes.slice(0, Math.floor(approvedPostcodes.length/3)),
+  2: approvedPostcodes.slice(Math.floor(approvedPostcodes.length/3), Math.floor(2*approvedPostcodes.length/3)),
+  3: approvedPostcodes.slice(Math.floor(2*approvedPostcodes.length/3))
+};
+
+const TIME_BLOCKS = ["8:00 - 11:00","11:00 - 15:00","15:00 - 19:00"];
+const DAYS_ROTATION = [
+  [1,2,3],
+  [2,3,1],
+  [3,1,2],
+  [1,2,3],
+  [2,3,1],
+  [3,1,2]
+];
+
+function getZoneByPostcode(pc){
+  for(const z in ZONES){
+    if(ZONES[z].includes(pc)) return parseInt(z);
+  }
+  return null;
+}
 function generateSlots(){
   const slotSelect = document.getElementById('slotSelect');
   slotSelect.innerHTML = '<option value="">Select a delivery slot</option>'; // placeholder prompt
@@ -39,3 +241,92 @@ function generateSlots(){
     day.setDate(day.getDate()+1);
   }
 }
+
+// Trolley and totals
+const trolley = JSON.parse(localStorage.getItem('grocerygo_trolley')||'[]');
+const subtotal = trolley.reduce((s,i)=>s+(i.price||0)*(i.quantity||1),0);
+const deliveryFee = subtotal>=120?0:10;
+const total = subtotal + deliveryFee;
+document.getElementById('subtotalText').textContent=`$${subtotal.toFixed(2)}`;
+document.getElementById('deliveryFeeText').textContent=`$${deliveryFee.toFixed(2)}`;
+document.getElementById('totalText').textContent=`$${total.toFixed(2)}`;
+
+// Postcode validation
+document.getElementById('postcode').addEventListener('input',()=>{
+  const pc = document.getElementById('postcode').value.trim();
+  const slotSelect = document.getElementById('slotSelect');
+  const postcodeError = document.getElementById('postcodeError');
+  if(!approvedPostcodes.includes(pc)){
+    postcodeError.style.display='block';
+    slotSelect.disabled=true;
+  } else{
+    postcodeError.style.display='none';
+    slotSelect.disabled=false;
+    generateSlots();
+  }
+});
+
+// Enable pay button
+function checkPayEnable(){
+  const ids=['name','mobile','email','streetNo','streetName','suburb','postcode','state'];
+  const allFilled = ids.every(id=>document.getElementById(id).value.trim()!=='');
+  const slotOk = document.getElementById('slotSelect').value.length>0 && !document.getElementById('slotSelect').disabled;
+  document.getElementById('payBtn').disabled = !(allFilled && slotOk && trolley.length>0);
+}
+['name','mobile','email','streetNo','streetName','suburb','postcode','state','slotSelect'].forEach(id=>document.getElementById(id).addEventListener('input',checkPayEnable));
+document.getElementById('slotSelect').addEventListener('change',checkPayEnable);
+
+// Back to trolley
+document.getElementById('backTrolleyBtn').addEventListener('click',()=>window.location.href='trolley.html');
+
+// Stripe integration
+const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+const elements = stripe.elements();
+const card = elements.create('card',{hidePostalCode:true});
+card.mount('#cardNumber');
+
+// Payment processing
+document.getElementById('payBtn').addEventListener('click',async()=>{
+  const payBtn=document.getElementById('payBtn'); payBtn.disabled=true;
+  const customer={
+    name:document.getElementById('name').value.trim(),
+    mobile:document.getElementById('mobile').value.trim(),
+    email:document.getElementById('email').value.trim(),
+    unit:document.getElementById('unit').value.trim(),
+    streetNo:document.getElementById('streetNo').value.trim(),
+    streetName:document.getElementById('streetName').value.trim(),
+    suburb:document.getElementById('suburb').value.trim(),
+    postcode:document.getElementById('postcode').value.trim(),
+    state:document.getElementById('state').value
+  };
+  const slot = document.getElementById('slotSelect').value;
+  try{
+    const piResp=await fetch(CREATE_PAYMENT_INTENT_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({amount_cents:Math.round(total*100),currency:'aud',receipt_email:customer.email})
+    });
+    const piJson=await piResp.json();
+    if(!piResp.ok) throw new Error(piJson.error||'Payment intent creation failed');
+    const clientSecret=piJson.clientSecret;
+    const confirm=await stripe.confirmCardPayment(clientSecret,{
+      payment_method:{card:card,billing_details:{name:customer.name,email:customer.email,phone:customer.mobile,address:{line1:customer.streetNo,city:customer.suburb,postal_code:customer.postcode,state:customer.state}}}
+    });
+    if(confirm.error){document.getElementById('payMessage').textContent=confirm.error.message;payBtn.disabled=false;return;}
+    const createResp=await fetch(CREATE_ORDER_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({order_number_prefix:'GG',customer_name:customer.name,email:customer.email,phone:customer.mobile,address_line1:`${customer.unit?customer.unit+'/':''}${customer.streetNo} ${customer.streetName}`,suburb:customer.suburb,postcode:customer.postcode,state:customer.state,country:'Australia',items:trolley,total_amount:total,delivery_fee:deliveryFee,stripe_id:confirm.paymentIntent?.id,stripe_status:confirm.paymentIntent?.status,delivery_slot:slot})
+    });
+    const createJson=await createResp.json();
+    if(!createResp.ok) throw new Error(createJson.error||'Order creation failed');
+    localStorage.setItem('lastOrderNumber',createJson.order_number||`GG-${Date.now()}`);
+    window.location.href='success.html';
+  }catch(err){
+    document.getElementById('payMessage').textContent=err.message;
+    payBtn.disabled=false;
+  }
+});
+</script>
+</body>
+</html>
