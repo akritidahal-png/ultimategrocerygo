@@ -1,9 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
+import { supabase } from "../supabaseClient.js";
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   try {
     const {
@@ -14,52 +12,50 @@ export default async function handler(req, res) {
       suburb,
       postcode,
       state,
-      country = 'Australia',
+      country = "Australia",
       items,
       total_amount,
       delivery_fee,
       stripe_id,
       stripe_status,
-      delivery_slot
+      delivery_slot,
+      order_number_prefix = "GG",
     } = req.body;
 
-    if (!items || !Array.isArray(items) || items.length === 0)
-      return res.status(400).json({ error: 'No items to save' });
+    if (!customer_name || !email || !items || !Array.isArray(items))
+      return res.status(400).json({ error: "Missing required order fields" });
 
-    // Generate order number
-    const { data: serialResult, error: serialError } = await supabase.rpc('get_next_serial_number');
-    let orderNumber;
-    if (serialError || !serialResult) orderNumber = `GGO-${Math.floor(10000 + Math.random() * 90000)}`;
-    else orderNumber = `GGO-${String(serialResult).padStart(4, '0')}`;
+    // Generate order number (simple fallback)
+    const orderNumber = `${order_number_prefix}-${Date.now()}`;
 
-    const { error } = await supabase.from('orders').insert([{
-      order_number: orderNumber,
-      customer_name: customer_name || 'Unknown',
-      email: email || '',
-      phone: phone || '',
-      address_line1: address_line1 || '',
-      suburb: suburb || '',
-      postcode: postcode || '',
-      state: state || '',
-      country,
-      items: JSON.stringify(items),
-      total_amount: total_amount || 0,
-      delivery_fee: delivery_fee || 0,
-      stripe_id: stripe_id || '',
-      stripe_status: stripe_status || 'pending',
-      delivery_slot: delivery_slot || 'Anytime',
-      status: 'pending',
-      fulfillment_status: 'unfulfilled'
-    }]);
+    const { error } = await supabase.from("orders").insert([
+      {
+        order_number: orderNumber,
+        customer_name,
+        email,
+        phone: phone || null,
+        address_line1: address_line1 || null,
+        suburb: suburb || null,
+        postcode: postcode || null,
+        state: state || null,
+        country,
+        items: JSON.stringify(items),
+        total_amount: total_amount || 0,
+        delivery_fee: delivery_fee || 0,
+        stripe_id: stripe_id || null,
+        stripe_status: stripe_status || null,
+        delivery_slot: delivery_slot || null,
+      },
+    ]);
 
     if (error) {
-      console.error('Supabase insert error:', error);
-      return res.status(500).json({ error: 'Failed to save order' });
+      console.error("Supabase insert error:", error);
+      return res.status(500).json({ error: "Failed to save order" });
     }
 
     res.status(200).json({ order_number: orderNumber });
   } catch (err) {
-    console.error('Create Order Error:', err);
-    res.status(500).json({ error: err.message || 'Server error saving order' });
+    console.error("Create order error:", err);
+    res.status(500).json({ error: err.message || "Server error" });
   }
 }
