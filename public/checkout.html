@@ -276,7 +276,7 @@ document.getElementById('payBtn').addEventListener('click', async () => {
   const msg = document.getElementById('payMessage');
   payBtn.disabled = true;
   msg.textContent = 'Processing...';
-  
+
   const { subtotal, deliveryFee, total } = updateTotals();
   const payload = {
     trolley,
@@ -296,7 +296,6 @@ document.getElementById('payBtn').addEventListener('click', async () => {
   };
 
   try {
-    // 1️⃣ Create Stripe Payment Intent
     const res = await fetch(CREATE_PAYMENT_INTENT_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -304,21 +303,23 @@ document.getElementById('payBtn').addEventListener('click', async () => {
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Payment intent failed');
-    const { clientSecret } = data;
 
-    // 2️⃣ Confirm payment
-    const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+    const paymentResult = await stripe.confirmCardPayment(data.clientSecret, {
       payment_method: {
         card: cardNumber,
-        billing_details: { name: payload.name, email: payload.email, phone: payload.mobile }
+        billing_details: {
+          name: payload.name,
+          email: payload.email,
+          phone: payload.mobile
+        }
       }
     });
-    if (stripeError) throw stripeError;
 
-    // 3️⃣ Generate order number
-    const orderNo = 'GGX' + Math.floor(1000 + Math.random() * 9000); // GGXxxxx format
+    if (paymentResult.error) throw paymentResult.error;
+    const paymentIntent = paymentResult.paymentIntent;
 
-    // 4️⃣ Save order in Supabase
+    const orderNo = 'GGX' + Math.floor(1000 + Math.random() * 9000);
+
     const orderPayload = {
       ...payload,
       order_number: orderNo,
@@ -333,7 +334,6 @@ document.getElementById('payBtn').addEventListener('click', async () => {
     const orderData = await orderRes.json();
     if (!orderRes.ok) throw new Error(orderData.error || 'Order saving failed');
 
-    // 5️⃣ Redirect to success page with orderNo
     window.location = `success.html?orderNo=${orderNo}`;
 
   } catch (err) {
@@ -343,7 +343,9 @@ document.getElementById('payBtn').addEventListener('click', async () => {
   }
 });
 
+
 </script>
 </body>
 </html>
+
 
