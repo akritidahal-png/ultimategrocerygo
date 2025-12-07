@@ -170,9 +170,14 @@ footer{background:var(--nepali-blue);color:white;text-align:center;padding:15px 
 </footer>
 
 <script src="https://js.stripe.com/v3/"></script>
+<script type="module">
 // ---------------- CONFIG ----------------
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 const STRIPE_PUBLISHABLE_KEY = 'pk_test_51SUX2cAtxwsqQt5Tf4eFuJC4uXKoauXjBAU5TiHC7MZnlR7rI6HIyHCMYJFeaCU7rSkQ4FBJD5q53QOw3DPKcOlg00VHp43m4l';
 const CREATE_PAYMENT_INTENT_URL = '/api/create-payment-intent';
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_SERVICE_KEY = 'YOUR_SUPABASE_SERVICE_ROLE_KEY';
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 const approvedPostcodes = [
   "4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018",
   "4025","4029","4030","4031","4032","4034","4035","4036","4051","4053","4054","4055","4059",
@@ -208,77 +213,55 @@ const ZONES = {
     4508,4509,4510,4511,4512,4513,4514,4515,4516,4517,4518,4519,4520,
     4521
   ]
-};
-// ---------------- SLOT LOGIC ----------------
+  };
+
 const TIME_BLOCKS = ["8:00 - 11:00","11:00 - 15:00","15:00 - 19:00"];
-const DAYS_ROTATION = [
-  [1,2,3], // Monday
-  [2,3,1], // Tuesday
-  [3,1,2], // Wednesday
-  [1,2,3], // Thursday
-  [2,3,1], // Friday
-  [3,1,2]  // Saturday
-];
+const DAYS_ROTATION = [ [1,2,3],[2,3,1],[3,1,2],[1,2,3],[2,3,1],[3,1,2] ];
 
 const slotSelect = document.getElementById('slotSelect');
 const postcodeInput = document.getElementById('postcode');
 
 postcodeInput.addEventListener('input', () => { checkPostcode(); checkPayEnable(); });
 
-function getZoneByPostcode(pc) {
-  pc = pc.toString().trim();
-  for (const zone in ZONES) {
-    if (ZONES[zone].map(String).includes(pc)) return parseInt(zone);
-  }
-  return null;
-}
+function getZoneByPostcode(pc){ pc = pc.toString().trim(); for(const zone in ZONES){ if(ZONES[zone].map(String).includes(pc)) return parseInt(zone); } return null; }
 
-function generateSlots(pc) {
+function generateSlots(pc){
   const userZone = getZoneByPostcode(pc);
-  if (!userZone) return;
+  if(!userZone) return;
   slotSelect.innerHTML = '<option value="">Select a delivery slot</option>';
-
   const now = new Date();
-  const earliest = new Date(now.getTime() + 8*3600*1000); // 8-hour handling
+  const earliest = new Date(now.getTime() + 8*3600*1000);
   let day = new Date();
   let slotsAdded = 0;
-
-  // First option: Anytime
   const anytimeOption = document.createElement('option');
-  anytimeOption.value = 'anytime';
-  anytimeOption.textContent = 'Anytime (Fastest Available)';
+  anytimeOption.value='anytime';
+  anytimeOption.textContent='Anytime (Fastest Available)';
   slotSelect.appendChild(anytimeOption);
 
-  // Generate up to 6 upcoming delivery slots
-  while(slotsAdded < 6) {
-    if(day.getDay() !== 0) { // Skip Sundays
-      const rotation = DAYS_ROTATION[(day.getDay() - 1) % DAYS_ROTATION.length];
-      for(let i = 0; i < 3; i++) {
-        const time = TIME_BLOCKS[i];
-        const slotDate = new Date(day);
+  while(slotsAdded<6){
+    if(day.getDay()!==0){
+      const rotation=DAYS_ROTATION[(day.getDay()-1)%DAYS_ROTATION.length];
+      for(let i=0;i<3;i++){
+        const time=TIME_BLOCKS[i];
+        const slotDate=new Date(day);
         slotDate.setHours(parseInt(time.split(':')[0]),0,0,0);
-
-        if(slotDate >= earliest && slotsAdded < 6) {
-          // Allow slot if it matches zone or fallback to ensure always show slots
-          if(rotation[i] === userZone || true) {
-            const option = document.createElement('option');
-            option.value = `${day.toISOString().slice(0,10)}|${time}`;
-            option.textContent = `${day.toDateString()} — ${time}`;
-            slotSelect.appendChild(option);
-            slotsAdded++;
-          }
+        if(slotDate>=earliest && slotsAdded<6){
+          const option=document.createElement('option');
+          option.value=`${day.toISOString().slice(0,10)}|${time}`;
+          option.textContent=`${day.toDateString()} — ${time}`;
+          slotSelect.appendChild(option);
+          slotsAdded++;
         }
       }
     }
-    day.setDate(day.getDate() + 1);
+    day.setDate(day.getDate()+1);
   }
 }
 
-// ---------------- POSTCODE CHECK ----------------
-function checkPostcode() {
+function checkPostcode(){
   const pcStr = postcodeInput.value.trim().replace(/\s+/g,'');
   const postcodeError = document.getElementById('postcodeError');
-  if (!approvedPostcodes.includes(pcStr)) {
+  if(!approvedPostcodes.includes(pcStr)){
     postcodeError.style.display='block';
     slotSelect.disabled=true;
     slotSelect.innerHTML='<option value="">Enter postcode to see available slots</option>';
@@ -290,66 +273,65 @@ function checkPostcode() {
   return true;
 }
 
-// ---------------- ENABLE PAY BUTTON ----------------
+// ---------------- TROLLEY & TOTALS ----------------
 let trolley = JSON.parse(localStorage.getItem('grocerygo_trolley')||'[]');
-function checkPayEnable() {
-  const required=['name','mobile','email','streetNo','streetName','suburb','postcode'];
-  const allFilled = required.every(id=>document.getElementById(id).value.trim()!=='');
-  const pcOk = approvedPostcodes.includes(postcodeInput.value.trim().replace(/\s+/g,''));
-  const slotOk = slotSelect.value.length>0 && !slotSelect.disabled;
-  const cartOk = trolley.length>0;
-  document.getElementById('payBtn').disabled = !(allFilled && pcOk && slotOk && cartOk);
-}
-slotSelect.addEventListener('change', checkPayEnable);
-checkPostcode(); checkPayEnable();
-
-// ---------------- Trolley & Totals ----------------
-function updateTotals() {
+function updateTotals(){
   if(trolley.length===0){ alert("Your trolley is empty."); window.location.href='trolley.html'; return; }
-  const subtotal = trolley.reduce((s,i)=>s+(i.price||0)*(i.quantity||1),0);
-  const deliveryFee = subtotal>=120?0:10;
-  const total = subtotal+deliveryFee;
+  const subtotal=trolley.reduce((s,i)=>s+(i.price||0)*(i.quantity||1),0);
+  const deliveryFee=subtotal>=120?0:10;
+  const total=subtotal+deliveryFee;
   document.getElementById('subtotalText').textContent=`$${subtotal.toFixed(2)}`;
   document.getElementById('deliveryFeeText').textContent=`$${deliveryFee.toFixed(2)}`;
   document.getElementById('totalText').textContent=`$${total.toFixed(2)}`;
   return {subtotal,deliveryFee,total};
 }
-const initialTotals = updateTotals();
+const initialTotals=updateTotals();
 
-// ---------------- BACK TO TROLLEY ----------------
+// ---------------- PAY BUTTON ----------------
+function checkPayEnable(){
+  const required=['name','mobile','email','streetNo','streetName','suburb','postcode'];
+  const allFilled=required.every(id=>document.getElementById(id).value.trim()!=='');
+  const pcOk=approvedPostcodes.includes(postcodeInput.value.trim().replace(/\s+/g,''));
+  const slotOk=slotSelect.value.length>0 && !slotSelect.disabled;
+  const cartOk=trolley.length>0;
+  document.getElementById('payBtn').disabled = !(allFilled && pcOk && slotOk && cartOk);
+}
+slotSelect.addEventListener('change', checkPayEnable);
+checkPostcode(); checkPayEnable();
+
 document.getElementById('backTrolleyBtn').addEventListener('click',()=>window.location.href='trolley.html');
 
-// ---------------- STRIPE ----------------
 const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
 const elements = stripe.elements();
 ['cardNumber','cardExpiry','cardCVC'].forEach(id => elements.create(id==='cardNumber'?'cardNumber':id==='cardExpiry'?'cardExpiry':'cardCvc').mount(`#${id}`));
 
-// ---------------- PAYMENT ----------------
+// ---------------- PAYMENT & SAVE ORDER ----------------
 document.getElementById('payBtn').addEventListener('click', async ()=>{
-  const payBtn = document.getElementById('payBtn');
-  payBtn.disabled = true;
+  const payBtn=document.getElementById('payBtn');
+  payBtn.disabled=true;
   document.getElementById('payMessage').textContent='Processing payment...';
-  const {deliveryFee,total} = initialTotals;
+  const {subtotal,deliveryFee,total}=initialTotals;
 
-  const customer = {
+  const customer={
     name: document.getElementById('name').value.trim(),
     mobile: document.getElementById('mobile').value.trim(),
-    email: document.getElementById('email').value.trim(),
+    email: document.getElementById('email').value.trim()
   };
-  const unit = document.getElementById('unit').value.trim();
-  const streetNo = document.getElementById('streetNo').value.trim();
-  const streetName = document.getElementById('streetName').value.trim();
-  const fullAddressLine = `${streetNo} ${streetName}` + (unit?`, Unit ${unit}`:'');
-  const shipping = {
-    address: fullAddressLine,
-    suburb: document.getElementById('suburb').value.trim(),
-    postcode: document.getElementById('postcode').value.trim(),
-    state: document.getElementById('state').value,
-    deliverySlot: slotSelect.value,
+  const unit=document.getElementById('unit').value.trim();
+  const streetNo=document.getElementById('streetNo').value.trim();
+  const streetName=document.getElementById('streetName').value.trim();
+  const fullAddressLine=`${streetNo} ${streetName}`+(unit?`, Unit ${unit}`:'');
+  const shipping={
+    address:fullAddressLine,
+    suburb:document.getElementById('suburb').value.trim(),
+    postcode:document.getElementById('postcode').value.trim(),
+    state:document.getElementById('state').value,
+    deliverySlot:slotSelect.value,
     deliveryFee
   };
 
   try {
+    // 1. Create payment intent
     const piResp = await fetch(CREATE_PAYMENT_INTENT_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -371,22 +353,27 @@ document.getElementById('payBtn').addEventListener('click', async ()=>{
             city:shipping.suburb,
             postal_code:shipping.postcode,
             state:shipping.state,
-            country:'AU',
+            country:'AU'
           }
         }
-      },
-      return_url:`${window.location.origin}/success.html?payment_status=success`
+      }
     });
 
     if(confirm.error) throw new Error(`Payment failed: ${confirm.error.message}`);
 
+    // 2. Save order to Supabase
+    const orderData={ customer, shipping, trolley, subtotal, deliveryFee, total, paymentStatus:'paid' };
+    const { data, error } = await supabase.from('orders').insert(orderData).select().single();
+    if(error) throw new Error('Order save failed.');
+
+    // 3. Redirect to success page with order number
+    window.location.href=`success.html?order_number=${data.id}`;
+
   } catch(err){
-    document.getElementById('payMessage').textContent = err.message;
-    payBtn.disabled = false;
+    document.getElementById('payMessage').textContent=err.message;
+    payBtn.disabled=false;
   }
 });
-
 </script>
 </body>
 </html>
-
