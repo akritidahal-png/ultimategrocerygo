@@ -154,13 +154,20 @@ footer{background:var(--nepali-blue);color:white;text-align:center;padding:15px 
 const STRIPE_PUBLISHABLE_KEY = 'pk_test_XXXXXXXXXXXXXXXXXXXXXXXX';
 const CREATE_PAYMENT_INTENT_URL = '/api/create-payment-intent';
 
-// Approved postcodes
+// Full approved postcodes
 const approvedPostcodes = ["4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018","4025","4029","4030","4031","4032","4034","4035","4036","4051","4053","4054","4055","4059","4060","4061","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075","4076","4077","4078","4101","4102","4103","4104","4105","4106","4107","4108","4109","4110","4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123","4124","4125","4127","4128","4129","4130","4132","4133","4151","4152","4153","4154","4155","4156","4157","4158","4159","4160","4161","4163","4164","4165","4169","4170","4171","4172","4173","4174","4178","4179","4183","4184","4205","4207","4280","4285","4300","4301","4303","4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504","4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517","4518","4519","4520","4521"];
 
-// Stripe setup
+// Zones
+const ZONES = {
+1:["4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018","4025","4029","4030","4031","4032","4034","4035","4036"],
+2:["4051","4053","4054","4055","4059","4060","4061","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075","4076","4077","4078"],
+3:["4101","4102","4103","4104","4105","4106","4107","4108","4109","4110","4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123","4124","4125","4127","4128","4129","4130","4132","4133","4151","4152","4153","4154","4155","4156","4157","4158","4159","4160","4161","4163","4164","4165","4169","4170","4171","4172","4173","4174","4178","4179","4183","4184","4205","4207","4280","4285","4300","4301","4303","4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504","4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517","4518","4519","4520","4521"]
+};
+
+// Stripe
 const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
 const elements = stripe.elements();
-const cardElement = elements.create('card');
+const cardElement = elements.create('card', { wallet: 'never' });
 cardElement.mount('#card-element');
 
 const payBtn = document.getElementById('payBtn');
@@ -187,19 +194,15 @@ function updateTotals(){
 }
 const totals=updateTotals();
 
-// Postcode & slots
-const ZONES = {1:["4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018","4025","4029","4030","4031","4032","4034","4035","4036"],2:["4051","4053","4054","4055","4059","4060","4061","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075","4076","4077","4078"],3:["4101","4102","4103","4104","4105","4106","4107","4108","4109","4110","4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123","4124","4125","4127","4128","4129","4130","4132","4133","4151","4152","4153","4154","4155","4156","4157","4158","4159","4160","4161","4163","4164","4165","4169","4170","4171","4172","4173","4174","4178","4179","4183","4184","4205","4207","4280","4285","4300","4301","4303","4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504","4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517","4518","4519","4520","4521"]};
+// Time slots
 const TIME_BLOCKS = ["8:00 - 11:00","11:00 - 15:00","15:00 - 19:00"];
-function getZoneByPostcode(pc){for(const z in ZONES){if(ZONES[z].includes(pc)) return parseInt(z);};return null;}
+function getZoneByPostcode(pc){for(const z in ZONES){if(ZONES[z].includes(pc)) return parseInt(z);} return null;}
 function generateSlots(pc){
   const zone=getZoneByPostcode(pc);
   if(!zone){slotSelect.disabled=true; return;}
   slotSelect.disabled=false;
   slotSelect.innerHTML='<option value="">Select a delivery slot</option>';
-  const now=new Date();
-  const earliest=new Date(now.getTime()+8*3600*1000);
-  let day=new Date();
-  let added=0;
+  let day=new Date(), added=0;
   while(added<6){
     if(day.getDay()!==0){
       for(let i=0;i<3&&added<6;i++){
@@ -214,6 +217,8 @@ function generateSlots(pc){
     day.setDate(day.getDate()+1);
   }
 }
+
+// Postcode input
 postcodeInput.addEventListener('input',()=>{
   const pc=postcodeInput.value.trim();
   if(!approvedPostcodes.includes(pc)){
@@ -226,7 +231,7 @@ postcodeInput.addEventListener('input',()=>{
   generateSlots(pc);
 });
 
-// Enable pay button only if all fields filled
+// Enable pay button
 function checkPayButton(){
   const required=['name','mobile','email','streetNo','streetName','suburb','postcode'];
   const filled=required.every(id=>document.getElementById(id).value.trim()!=='');
@@ -235,7 +240,7 @@ function checkPayButton(){
 document.querySelectorAll('input, select').forEach(el=>el.addEventListener('input',checkPayButton));
 slotSelect.addEventListener('change',checkPayButton);
 
-// Pay button click
+// Pay click
 payBtn.addEventListener('click',async()=>{
   payBtn.disabled=true;
   const customer={name:document.getElementById('name').value,email:document.getElementById('email').value,mobile:document.getElementById('mobile').value};
