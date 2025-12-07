@@ -36,16 +36,19 @@ export default async function handler(req, res) {
       total,
     } = req.body;
 
+    // Validate essential data
     if (!Array.isArray(trolley) || trolley.length === 0)
-      return res.status(400).json({ error: "Trolley empty" });
+      return res.status(400).json({ error: "Trolley is empty" });
 
     if (!name || !email || !mobile)
       return res.status(400).json({ error: "Missing customer details" });
 
     if (!slot) return res.status(400).json({ error: "Missing delivery slot" });
 
-    if (!total) return res.status(400).json({ error: "Missing total" });
+    if (!total || isNaN(total) || total <= 0)
+      return res.status(400).json({ error: "Invalid total amount" });
 
+    // Convert total to cents
     const amountInCents = Math.round(Number(total) * 100);
 
     const shippingDetails = {
@@ -61,7 +64,7 @@ export default async function handler(req, res) {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: "aud",
-      automatic_payment_methods: { enabled: true },
+      payment_method_types: ["card"], // no wallet / link
       metadata: {
         customer_name: name,
         customer_email: email,
@@ -78,7 +81,7 @@ export default async function handler(req, res) {
     // Insert pending order in Supabase
     const { error: insertError } = await supabase.from("orders").insert([
       {
-        order_number: paymentIntent.id.substring(3),
+        order_number: `GG-${Date.now()}`,
         customer_name: name,
         email,
         phone: mobile,
@@ -99,7 +102,7 @@ export default async function handler(req, res) {
     ]);
 
     if (insertError) {
-      console.error("Supabase Pending Insert Error:", insertError);
+      console.error("Supabase Insert Error:", insertError);
       throw insertError;
     }
 
