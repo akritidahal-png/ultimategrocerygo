@@ -1,79 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>GroceryGo | Order Confirmed</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GroceryGo | Order Success</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
 <style>
-:root{
-  --primary-color:#DC143C;
-  --secondary-color:#003893;
-  --highlight-color:#FFD700;
-  --bg-color:#f8f9fa;
-  --text-color:#222;
-  --border-color:#ddd;
-  --nepali-blue:#003893;
-}
-body{font-family:'Poppins',sans-serif;margin:0;background:var(--bg-color);color:var(--text-color);line-height:1.6;}
-header{background:linear-gradient(to right,var(--primary-color),var(--secondary-color));color:#fff;padding:15px 10px 5px 10px;text-align:center;position:sticky;top:0;z-index:1000;}
-header h1{margin:0;font-size:30px;font-weight:900;display:flex;justify-content:center;align-items:center;height:60px;}
-.logo-container{display:flex;align-items:center;position:relative;padding-left:10px}
-.logo-trolley-g{font-size:55px;color:white;font-weight:900;line-height:1;position:relative;padding-right:2px;text-shadow:1px 1px 0 var(--primary-color),2px 2px 2px rgba(0,0,0,0.5)}
-.logo-grocery-text{position:absolute;top:-4px;left:10px;font-size:14px;font-weight:700;color:#FF8C00;letter-spacing:0.5px;white-space:nowrap;text-shadow:0 0 1px rgba(0,0,0,0.4);z-index:10;transform:rotate(-5deg);padding:2px 4px;background:rgba(255,255,255,0.1);border-radius:3px}
-.logo-o{font-size:55px;color:white;font-weight:900;line-height:1;text-shadow:1px 1px 0 var(--primary-color),2px 2px 2px rgba(0,0,0,0.5);transform:translateX(-5px) rotate(2deg);position:relative;z-index:5}
-nav{margin-top:5px}
-nav a{color:white;text-decoration:none;margin:0 10px;font-weight:600;font-size:14px;padding:5px 0;display:inline-block}
-nav a:hover{text-decoration:underline}
-.container{width:95%;max-width:800px;margin:40px auto;padding:10px;display:flex;flex-direction:column;gap:20px;}
-.panel{background:white;padding:25px;border-radius:8px;margin-bottom:20px;box-shadow:0 4px 6px rgba(0,0,0,0.06);text-align:center;}
-h2{color:var(--primary-color);margin-bottom:15px;}
-p{margin-bottom:10px;}
-.order-number{font-weight:700;color:var(--secondary-color);font-size:1.2em;margin:15px 0;}
-.btn{padding:12px 20px;border:none;border-radius:6px;background:var(--primary-color);color:white;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;margin-top:20px;}
-.btn:hover{opacity:0.9;}
-footer{background:var(--nepali-blue);color:white;text-align:center;padding:15px 0;font-size:14px;margin-top:40px;}
-@media(max-width:768px){.container{width:95%;}}
+    body {
+        font-family: 'Poppins', sans-serif;
+        margin: 0;
+        background: #f7f9fc;
+        color: #222;
+    }
+    header {
+        background: #003893;
+        color: white;
+        padding: 20px 0;
+        text-align: center;
+    }
+    h1 {
+        font-weight: 700;
+        margin: 0;
+    }
+    .container {
+        max-width: 600px;
+        margin: 50px auto;
+        background: white;
+        padding: 40px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        text-align: center;
+    }
+    .success-icon {
+        font-size: 60px;
+        color: #2ecc71;
+        margin-bottom: 15px;
+    }
+    .order-number-box {
+        margin: 20px 0;
+        font-size: 22px;
+        font-weight: 600;
+        background: #eef3ff;
+        border-left: 4px solid #003893;
+        padding: 15px;
+        border-radius: 8px;
+    }
+    .loading {
+        font-size: 16px;
+        color: #666;
+    }
+    .btn-home {
+        display: inline-block;
+        margin-top: 30px;
+        background: #003893;
+        color: white;
+        padding: 14px 28px;
+        border-radius: 8px;
+        font-size: 16px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: 0.2s;
+    }
+    .btn-home:hover {
+        background: #002d74;
+    }
 </style>
 </head>
+
 <body>
+
 <header>
-<h1>
-<div class="logo-container">
-<span class="logo-trolley-g">G<span class="logo-grocery-text">Grocery</span></span>
-<span class="logo-o">o</span>
-</div>
-</h1>
-<nav>
-<a href="index.html">HOME</a>
-<a href="store.html">STORE</a>
-<a href="about.html">ABOUT US</a>
-<a href="contact.html">CONTACT</a>
-</nav>
+    <h1>Order Confirmed</h1>
 </header>
 
 <div class="container">
-  <div class="panel">
+    <div class="success-icon">✔</div>
+
     <h2>Thanks — your order is confirmed!</h2>
-    <p>We've received your order. Below is your order number for reference.</p>
-    <div class="order-number" id="orderNumber">Loading...</div>
+    <p>We've received your order. Your order number is shown below.</p>
+
+    <div class="order-number-box" id="orderNumber">Loading...</div>
+
     <p>Your order details will be emailed to you shortly.</p>
-    <a href="index.html" class="btn">Back to Home — Continue Shopping</a>
-  </div>
+
+    <a href="index.html" class="btn-home">Back to Home — Continue Shopping</a>
 </div>
 
-<footer>
-© 2025 GroceryGo
-</footer>
+<script type="module">
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-<script>
-// Fetch the order number from localStorage (set after successful payment)
-document.addEventListener('DOMContentLoaded',()=>{
-  const orderNumber = localStorage.getItem('lastOrderNumber') || 'N/A';
-  document.getElementById('orderNumber').textContent = orderNumber;
-  // Optionally clear the last order from localStorage if you want
-  // localStorage.removeItem('lastOrderNumber');
-});
+const SUPABASE_URL = "https://gikdqaxdqfmzdvolkxbn.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Read PID from URL
+const params = new URLSearchParams(window.location.search);
+const pid = params.get("pid");
+const orderBox = document.getElementById("orderNumber");
+
+if (!pid) {
+    orderBox.textContent = "Order number unavailable.";
+} else {
+    loadOrderNumber(pid);
+}
+
+async function loadOrderNumber(pid) {
+    orderBox.textContent = "Loading...";
+
+    const { data, error } = await supabase
+        .from("orders")
+        .select("order_number")
+        .eq("stripe_id", pid)
+        .single();
+
+    if (error || !data) {
+        orderBox.textContent = "Order not found.";
+        console.error(error);
+        return;
+    }
+
+    orderBox.textContent = data.order_number;
+}
 </script>
+
 </body>
 </html>
