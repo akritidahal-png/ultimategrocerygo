@@ -1,18 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GroceryGo | Checkout</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
-:root{
-  --primary-color:#DC143C;
-  --secondary-color:#003893;
-  --bg-color:#f8f9fa;
-  --text-color:#222;
-  --nepali-blue:#003893;
-}
+:root{--primary-color:#DC143C;--secondary-color:#003893;--bg-color:#f8f9fa;--text-color:#222;--nepali-blue:#003893;}
 *{box-sizing:border-box;}
 body{font-family:'Poppins',sans-serif;margin:0;background:var(--bg-color);color:var(--text-color);line-height:1.6;}
 header{background:linear-gradient(to right,var(--primary-color),var(--secondary-color));color:#fff;padding:15px 10px 5px 10px;text-align:center;position:sticky;top:0;z-index:1000;}
@@ -139,20 +133,9 @@ footer{background:var(--nepali-blue);color:white;text-align:center;padding:15px 
     <div class="heading">Payment</div>
     <label for="cardName">Name on card</label>
     <input id="cardName" placeholder="John Smith">
-
-    <label>Card number</label>
-    <div id="cardNumber" style="padding:10px; border:1px solid #ccc; border-radius:6px;"></div>
-
-    <div class="row">
-      <div class="col">
-        <label>Expiry</label>
-        <div id="cardExpiry" style="padding:10px; border:1px solid #ccc; border-radius:6px;"></div>
-      </div>
-      <div class="col">
-        <label>CVC</label>
-        <div id="cardCVC" style="padding:10px; border:1px solid #ccc; border-radius:6px;"></div>
-      </div>
-    </div>
+    <label>Card details</label>
+    <div id="card-element" style="padding:10px;border:1px solid #ccc;border-radius:6px;"></div>
+    <div id="card-errors" class="error"></div>
 
     <div id="paySection">
       <button id="payBtn" class="btn" disabled>Complete Payment</button>
@@ -168,213 +151,116 @@ footer{background:var(--nepali-blue);color:white;text-align:center;padding:15px 
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-/* --------- CONFIG --------- */
-const STRIPE_PUBLISHABLE_KEY = 'pk_test_51SUX2cAtxwsqQt5Tf4eFuJC4uXKoauXjBAU5TiHC7MZnlR7rI6HIyHCMYJFeaCU7rSkQ4FBJD5q53QOw3DPKcOlg00VHp43m4l';
+const STRIPE_PUBLISHABLE_KEY = 'pk_test_XXXXXXXXXXXXXXXXXXXXXXXX';
 const CREATE_PAYMENT_INTENT_URL = '/api/create-payment-intent';
 
-const approvedPostcodes = [
-  /* full list as you had before */
-  "4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018",
-  "4025","4029","4030","4031","4032","4034","4035","4036","4051","4053","4054","4055","4059",
-  "4060","4061","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075",
-  "4076","4077","4078","4101","4102","4103","4104","4105","4106","4107","4108","4109","4110",
-  "4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123",
-  "4124","4125","4127","4128","4129","4130","4132","4133","4151","4152","4153","4154","4155",
-  "4156","4157","4158","4159","4160","4161","4163","4164","4165","4169","4170","4171","4172",
-  "4173","4174","4178","4179","4183","4184","4205","4207","4280","4285","4300","4301","4303",
-  "4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504",
-  "4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517",
-  "4518","4519","4520","4521"
-];
+// Approved postcodes
+const approvedPostcodes = ["4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018","4025","4029","4030","4031","4032","4034","4035","4036","4051","4053","4054","4055","4059","4060","4061","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075","4076","4077","4078","4101","4102","4103","4104","4105","4106","4107","4108","4109","4110","4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123","4124","4125","4127","4128","4129","4130","4132","4133","4151","4152","4153","4154","4155","4156","4157","4158","4159","4160","4161","4163","4164","4165","4169","4170","4171","4172","4173","4174","4178","4179","4183","4184","4205","4207","4280","4285","4300","4301","4303","4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504","4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517","4518","4519","4520","4521"];
 
-const ZONES = {
-  1: ["4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018","4025","4029","4030","4031","4032","4034","4035","4036"],
-  2: ["4051","4053","4054","4055","4059","4060","4061","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075","4076","4077","4078"],
-  3: ["4101","4102","4103","4104","4105","4106","4107","4108","4109","4110","4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123","4124","4125","4127","4128","4129","4130","4132","4133","4151","4152","4153","4154","4155","4156","4157","4158","4159","4160","4161","4163","4164","4165","4169","4170","4171","4172","4173","4174","4178","4179","4183","4184","4205","4207","4280","4285","4300","4301","4303","4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504","4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517","4518","4519","4520","4521"]
-};
+// Stripe setup
+const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
+const elements = stripe.elements();
+const cardElement = elements.create('card');
+cardElement.mount('#card-element');
 
-const TIME_BLOCKS = ["8:00 - 11:00","11:00 - 15:00","15:00 - 19:00"];
-const DAYS_ROTATION = [
-  [1,2,3], [2,3,1], [3,1,2], [1,2,3], [2,3,1], [3,1,2]
-]; // Mon-Sat
-
+const payBtn = document.getElementById('payBtn');
+const backTrolleyBtn = document.getElementById('backTrolleyBtn');
 const slotSelect = document.getElementById('slotSelect');
 const postcodeInput = document.getElementById('postcode');
 
-function getZoneByPostcode(pc){
-  const p = String(pc).trim();
-  for(const z in ZONES){ if(ZONES[z].includes(p)) return parseInt(z,10); }
-  return null;
+// Trolley
+let trolley=[];
+try{
+  trolley=JSON.parse(localStorage.getItem('grocerygo_trolley')||'[]');
+  trolley=trolley.map(i=>({id:i.id,name:i.name||i.title||'',price:Number(i.price)||0,quantity:Number(i.quantity)||1}));
+}catch(e){trolley=[];}
+
+// Totals
+function updateTotals(){
+  const subtotal=trolley.reduce((s,i)=>s+(i.price*i.quantity),0);
+  const deliveryFee=subtotal>=120?0:10;
+  const total=subtotal+deliveryFee;
+  document.getElementById('subtotalText').textContent='$'+subtotal.toFixed(2);
+  document.getElementById('deliveryFeeText').textContent='$'+deliveryFee.toFixed(2);
+  document.getElementById('totalText').textContent='$'+total.toFixed(2);
+  return {subtotal,deliveryFee,total};
 }
+const totals=updateTotals();
 
+// Postcode & slots
+const ZONES = {1:["4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018","4025","4029","4030","4031","4032","4034","4035","4036"],2:["4051","4053","4054","4055","4059","4060","4061","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075","4076","4077","4078"],3:["4101","4102","4103","4104","4105","4106","4107","4108","4109","4110","4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123","4124","4125","4127","4128","4129","4130","4132","4133","4151","4152","4153","4154","4155","4156","4157","4158","4159","4160","4161","4163","4164","4165","4169","4170","4171","4172","4173","4174","4178","4179","4183","4184","4205","4207","4280","4285","4300","4301","4303","4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504","4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517","4518","4519","4520","4521"]};
+const TIME_BLOCKS = ["8:00 - 11:00","11:00 - 15:00","15:00 - 19:00"];
+function getZoneByPostcode(pc){for(const z in ZONES){if(ZONES[z].includes(pc)) return parseInt(z);};return null;}
 function generateSlots(pc){
-  const userZone = getZoneByPostcode(pc);
-  if(!userZone) return;
-  slotSelect.disabled = false;
-  slotSelect.innerHTML = '<option value="">Select a delivery slot</option>';
-
-  const now = new Date();
-  const earliest = new Date(now.getTime() + 8*3600*1000);
-  let day = new Date();
-  let slotsAdded = 0;
-
-  // Anytime first
-  const anytimeOption = document.createElement('option');
-  anytimeOption.value = 'anytime';
-  anytimeOption.textContent = 'Anytime (Fastest Available)';
-  slotSelect.appendChild(anytimeOption);
-
-  while(slotsAdded < 6){
+  const zone=getZoneByPostcode(pc);
+  if(!zone){slotSelect.disabled=true; return;}
+  slotSelect.disabled=false;
+  slotSelect.innerHTML='<option value="">Select a delivery slot</option>';
+  const now=new Date();
+  const earliest=new Date(now.getTime()+8*3600*1000);
+  let day=new Date();
+  let added=0;
+  while(added<6){
     if(day.getDay()!==0){
-      const rotation = DAYS_ROTATION[(day.getDay()-1)%DAYS_ROTATION.length];
-      for(let i=0;i<3&&slotsAdded<6;i++){
-        if(rotation[i]===userZone){
-          const time = TIME_BLOCKS[i];
-          const slotDate = new Date(day);
-          slotDate.setHours(parseInt(time.split(':')[0]),0,0,0);
-          if(slotDate >= earliest){
-            const opt = document.createElement('option');
-            opt.value = `${day.toISOString().slice(0,10)}|${time}`;
-            opt.textContent = `${day.toDateString()} — ${time}`;
-            slotSelect.appendChild(opt);
-            slotsAdded++;
-          }
-        }
+      for(let i=0;i<3&&added<6;i++){
+        const slotTime=TIME_BLOCKS[i];
+        const opt=document.createElement('option');
+        opt.value=`${day.toISOString().slice(0,10)}|${slotTime}`;
+        opt.textContent=`${day.toDateString()} — ${slotTime}`;
+        slotSelect.appendChild(opt);
+        added++;
       }
     }
     day.setDate(day.getDate()+1);
   }
 }
-
-function checkPostcode(){
-  const pcStr = postcodeInput.value.trim().replace(/\s+/g,'');
-  const postcodeError = document.getElementById('postcodeError');
-  if(!approvedPostcodes.includes(pcStr)){
-    postcodeError.style.display='block';
-    slotSelect.disabled=true;
-    slotSelect.innerHTML='<option value="">Enter postcode to see available slots</option>';
-    return false;
+postcodeInput.addEventListener('input',()=>{
+  const pc=postcodeInput.value.trim();
+  if(!approvedPostcodes.includes(pc)){
+    document.getElementById('postcodeError').style.display='block';
+    slotSelect.disabled=true; slotSelect.innerHTML='<option value="">Enter postcode to see available slots</option>';
+    payBtn.disabled=true;
+    return;
   }
-  postcodeError.style.display='none';
-  generateSlots(pcStr);
-  return true;
-}
-
-/* TROLLEY & TOTALS */
-let trolley = [];
-try{
-  trolley = JSON.parse(localStorage.getItem('grocerygo_trolley')||'[]').map(i=>({
-    id:i.id||null,
-    name:i.name||i.title||'',
-    price:Number(i.price)||0,
-    quantity:Number(i.quantity)||1,
-    meta:i.meta||null
-  }));
-}catch(e){ trolley=[]; console.warn(e); }
-
-function updateTotals(){
-  if(!Array.isArray(trolley)||trolley.length===0){
-    document.getElementById('subtotalText').textContent='$0.00';
-    document.getElementById('deliveryFeeText').textContent='$0.00';
-    document.getElementById('totalText').textContent='$0.00';
-    return {subtotal:0,deliveryFee:0,total:0};
-  }
-  const subtotal = trolley.reduce((s,i)=>s+(i.price*i.quantity),0);
-  const deliveryFee = subtotal>=120?0:10;
-  const total = +(subtotal+deliveryFee).toFixed(2);
-  document.getElementById('subtotalText').textContent=`$${subtotal.toFixed(2)}`;
-  document.getElementById('deliveryFeeText').textContent=`$${deliveryFee.toFixed(2)}`;
-  document.getElementById('totalText').textContent=`$${total.toFixed(2)}`;
-  return {subtotal,deliveryFee,total};
-}
-updateTotals();
-
-const requiredIds = ['name','mobile','email','streetNo','streetName','suburb','postcode'];
-
-function checkPayEnable(){
-  const allFilled = requiredIds.every(id=>document.getElementById(id).value.trim()!=='');
-  const slotVal = slotSelect.value;
-  const validSlot = slotVal && slotVal!=='';
-  const pcValue = postcodeInput.value.trim().replace(/\s+/g,'');
-  const postcodeOk = approvedPostcodes.includes(pcValue);
-  const cartOk = trolley.length>0;
-  document.getElementById('payBtn').disabled=!(allFilled && validSlot && postcodeOk && cartOk);
-}
-
-requiredIds.forEach(id=>{
-  const el = document.getElementById(id);
-  if(el) el.addEventListener('input', checkPayEnable);
+  document.getElementById('postcodeError').style.display='none';
+  generateSlots(pc);
 });
-postcodeInput.addEventListener('input', ()=>{ checkPostcode(); checkPayEnable(); });
-slotSelect.addEventListener('change', checkPayEnable);
 
-/* STRIPE ELEMENTS */
-const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
-const elements = stripe.elements();
-const cardNumber = elements.create('cardNumber'); cardNumber.mount('#cardNumber');
-const cardExpiry = elements.create('cardExpiry'); cardExpiry.mount('#cardExpiry');
-const cardCvc = elements.create('cardCvc'); cardCvc.mount('#cardCVC');
-[cardNumber,cardExpiry,cardCvc].forEach(el=>el.on('change',checkPayEnable));
+// Enable pay button only if all fields filled
+function checkPayButton(){
+  const required=['name','mobile','email','streetNo','streetName','suburb','postcode'];
+  const filled=required.every(id=>document.getElementById(id).value.trim()!=='');
+  payBtn.disabled=!(filled && slotSelect.value && trolley.length>0);
+}
+document.querySelectorAll('input, select').forEach(el=>el.addEventListener('input',checkPayButton));
+slotSelect.addEventListener('change',checkPayButton);
 
-document.getElementById('backTrolleyBtn').addEventListener('click',()=>window.location.href='trolley.html');
-
-/* PAYMENT FLOW */
-document.getElementById('payBtn').addEventListener('click', async ()=>{
-  const payBtn=document.getElementById('payBtn');
+// Pay button click
+payBtn.addEventListener('click',async()=>{
   payBtn.disabled=true;
-  document.getElementById('payMessage').textContent='Processing payment...';
-  const {subtotal,deliveryFee,total}=updateTotals();
-
-  const customer={
-    name:document.getElementById('name').value.trim(),
-    mobile:document.getElementById('mobile').value.trim(),
-    email:document.getElementById('email').value.trim()
-  };
-  const unit=document.getElementById('unit').value.trim();
-  const streetNo=document.getElementById('streetNo').value.trim();
-  const streetName=document.getElementById('streetName').value.trim();
-  const fullAddressLine = `${streetNo} ${streetName}` + (unit?`, Unit ${unit}`:'');
-
-  const shipping={
-    address: fullAddressLine,
-    suburb: document.getElementById('suburb').value.trim(),
-    postcode: document.getElementById('postcode').value.trim(),
-    state: document.getElementById('state').value,
-    deliverySlot: slotSelect.value,
-    deliveryFee
-  };
-
+  const customer={name:document.getElementById('name').value,email:document.getElementById('email').value,mobile:document.getElementById('mobile').value};
+  const shipping={unit:document.getElementById('unit').value,streetNo:document.getElementById('streetNo').value,streetName:document.getElementById('streetName').value,suburb:document.getElementById('suburb').value,postcode:document.getElementById('postcode').value,state:document.getElementById('state').value};
+  const deliverySlot=slotSelect.value;
   try{
-    const resp = await fetch(CREATE_PAYMENT_INTENT_URL,{
+    const resp=await fetch(CREATE_PAYMENT_INTENT_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ trolley, customer, shipping, subtotal, deliveryFee, total, slot:slotSelect.value, unit, streetNo, streetName, suburb, postcode:shipping.postcode, state:shipping.state, name:customer.name, email:customer.email, mobile:customer.mobile })
+      body:JSON.stringify({trolley,subtotal:totals.subtotal,deliveryFee:totals.deliveryFee,total:totals.total,...customer,...shipping,slot:deliverySlot})
     });
-    const piJson=await resp.json();
-    if(!resp.ok||piJson.error) throw new Error(piJson.error||'Failed to create payment intent.');
-    const clientSecret = piJson.clientSecret;
-    if(!clientSecret) throw new Error('No clientSecret returned.');
-
-    const confirmResult = await stripe.confirmCardPayment(clientSecret,{
-      payment_method:{ card:cardNumber, billing_details:{name:customer.name,email:customer.email,phone:customer.mobile,address:{line1:fullAddressLine,city:shipping.suburb,postal_code:shipping.postcode,state:shipping.state,country:'AU'}}},
-      return_url:`${window.location.origin}/success.html?payment_status=success`
-    });
-
-    if(confirmResult.error) throw new Error(confirmResult.error.message||'Payment confirmation failed.');
-    if(confirmResult.paymentIntent && confirmResult.paymentIntent.status==='succeeded'){
-      window.location.href=`${window.location.origin}/success.html?payment_status=success&pi=${confirmResult.paymentIntent.id}`;
-      return;
-    }
-    document.getElementById('payMessage').textContent='If authentication is required you will be redirected...';
-  }catch(err){
-    document.getElementById('payMessage').textContent=err.message||'Payment failed.';
+    const data=await resp.json();
+    if(resp.status!==200){throw new Error(data.error||'Payment failed');}
+    const {error:stripeErr}=await stripe.confirmCardPayment(data.clientSecret,{payment_method:{card:cardElement,billing_details:{name:customer.name,email:customer.email,phone:customer.mobile}}});
+    if(stripeErr) throw stripeErr;
+    localStorage.removeItem('grocerygo_trolley');
+    window.location.href='order-success.html';
+  }catch(e){
+    document.getElementById('payMessage').textContent=e.message;
     payBtn.disabled=false;
-    console.error(err);
   }
 });
-</script>
 
+// Back button
+backTrolleyBtn.addEventListener('click',()=>{window.location.href='trolley.html';});
+</script>
 </body>
 </html>
-
-
