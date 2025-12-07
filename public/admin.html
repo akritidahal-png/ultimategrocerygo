@@ -1,131 +1,100 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GroceryGo — Admin Orders</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<title>GroceryGo | Admin Orders</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
-  body{font-family:'Poppins',sans-serif;background:#f6f9fb;margin:0;padding:18px}
-  .wrap{max-width:1100px;margin:0 auto}
-  header{background:#003893;color:white;padding:12px;border-radius:8px;margin-bottom:12px}
-  .search-row{display:flex;gap:8px;margin-bottom:12px}
-  input,select{padding:10px;border-radius:8px;border:1px solid #e5e7eb}
-  .orders{display:flex;flex-direction:column;gap:10px}
-  .order-card{background:white;padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.04)}
-  .order-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
-  .items{margin-top:8px;font-size:14px;color:#374151}
-  .toggle-items{color:#2563eb;cursor:pointer;font-weight:600}
+body{font-family:'Poppins',sans-serif;margin:0;background:#f8f9fa;color:#222;}
+header{background:#003893;color:white;padding:15px;text-align:center;}
+h1{margin:0;font-size:24px;}
+.container{width:95%;max-width:1200px;margin:20px auto;}
+input{padding:8px;width:100%;max-width:300px;margin-bottom:15px;border:1px solid #ccc;border-radius:6px;}
+table{width:100%;border-collapse:collapse;background:white;border-radius:8px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.06);}
+th,td{padding:10px;text-align:left;border-bottom:1px solid #eee;font-size:0.9em;}
+th{background:#003893;color:white;position:sticky;top:0;}
+tr:nth-child(even){background:#f4f4f4;}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header><h2 style="margin:0">Admin — Recent Orders</h2></header>
+<header>
+<h1>GroceryGo Admin Orders</h1>
+</header>
 
-  <div style="margin-bottom:8px" class="search-row">
-    <input id="q" placeholder="Search by customer name or mobile..." style="flex:1">
-    <select id="filter" style="width:160px">
-      <option value="all">All statuses</option>
-      <option value="paid">Paid</option>
-      <option value="pending">Pending</option>
-      <option value="failed">Failed</option>
-    </select>
-    <button id="refreshBtn" style="padding:10px;border-radius:8px;background:#003893;color:white;border:0">Refresh</button>
-  </div>
-
-  <div id="orders" class="orders">Loading orders…</div>
+<div class="container">
+<input type="text" id="searchInput" placeholder="Search by name or mobile...">
+<table id="ordersTable">
+<thead>
+<tr>
+<th>ID</th>
+<th>Name</th>
+<th>Mobile</th>
+<th>Email</th>
+<th>Address</th>
+<th>Slot</th>
+<th>Subtotal</th>
+<th>Delivery Fee</th>
+<th>Total</th>
+<th>Status</th>
+<th>Items</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
 </div>
 
 <script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-const SUPABASE_URL = "https://gikdqaxdqfmzdvolkxbn.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis";
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+const SUPABASE_URL = 'https://YOUR_SUPABASE_PROJECT_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const ordersEl = document.getElementById('orders');
-const qEl = document.getElementById('q');
-const filterEl = document.getElementById('filter');
+const tableBody = document.querySelector('#ordersTable tbody');
+const searchInput = document.getElementById('searchInput');
 
-async function loadOrders() {
-  ordersEl.innerHTML = 'Loading…';
-  const status = filterEl.value;
-  try {
-    let query = supabase.from('orders').select('*').order('created_at',{ascending:false}).limit(200);
-    if (status !== 'all') query = query.eq('status', status);
-    const { data, error } = await query;
-    if (error) { ordersEl.innerHTML = 'Error fetching orders: ' + error.message; return; }
-    renderOrders(data || []);
-  } catch (err) {
-    ordersEl.innerHTML = 'Fetch error: ' + err.message;
-  }
+async function fetchOrders(){
+  const { data, error } = await supabase.from('orders').select('*').order('id', {ascending:false});
+  if(error) return console.error(error);
+  displayOrders(data);
 }
 
-function renderOrders(list) {
-  if (!list.length) { ordersEl.innerHTML = '<div class="order-card">No orders</div>'; return; }
-  ordersEl.innerHTML = '';
-  list.forEach(o => {
-    const card = document.createElement('div');
-    card.className = 'order-card';
-    let itemsHtml = '';
-    try {
-      const items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items || [];
-      itemsHtml = items.map(it => `<div>${it.name || 'item'} x${it.quantity || it.qty || 1} — $${((it.price||it.unit_price||0)*(it.quantity||it.qty||1)).toFixed(2)}</div>`).join('');
-    } catch(e) {
-      itemsHtml = '<div>Could not parse items</div>';
-    }
-    card.innerHTML = `
-      <div class="order-top">
-        <div>
-          <div><strong>#${o.order_number || (o.id||'')}</strong> — <span>${o.customer_name||o.name||''}</span></div>
-          <div class="small">${o.phone || o.email || ''} • ${o.created_at ? new Date(o.created_at).toLocaleString() : ''}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-weight:800">$${(o.total_amount||o.total||0).toString()}</div>
-          <div class="small">${o.status||''}</div>
-        </div>
-      </div>
-      <div style="margin-top:8px">
-        <div class="toggle-items" data-id="${o.id}">View items</div>
-        <div class="items" id="items-${o.id}" style="display:none">${itemsHtml}</div>
-      </div>
+function displayOrders(orders){
+  tableBody.innerHTML='';
+  orders.forEach(o=>{
+    const tr = document.createElement('tr');
+    const address = `${o.unit?o.unit+', ':''}${o.streetNo} ${o.streetName}, ${o.suburb} ${o.postcode}, ${o.state}`;
+    const items = JSON.parse(o.trolley||'[]').map(i=>`${i.name} x${i.quantity}`).join(', ');
+    tr.innerHTML=`
+      <td>${o.id}</td>
+      <td>${o.name}</td>
+      <td>${o.mobile}</td>
+      <td>${o.email}</td>
+      <td>${address}</td>
+      <td>${o.slot}</td>
+      <td>$${o.subtotal.toFixed(2)}</td>
+      <td>$${o.deliveryFee.toFixed(2)}</td>
+      <td>$${o.total.toFixed(2)}</td>
+      <td>${o.status}</td>
+      <td>${items}</td>
     `;
-    ordersEl.appendChild(card);
-  });
-
-  // attach toggles
-  document.querySelectorAll('.toggle-items').forEach(t => {
-    t.onclick = (ev) => {
-      const id = ev.target.dataset.id;
-      const itemsDiv = document.getElementById('items-'+id);
-      if (!itemsDiv) return;
-      itemsDiv.style.display = itemsDiv.style.display === 'none' ? 'block' : 'none';
-      ev.target.textContent = itemsDiv.style.display === 'block' ? 'Hide items' : 'View items';
-    };
+    tableBody.appendChild(tr);
   });
 }
 
-/* Search on input */
-qEl.addEventListener('input', async () => {
-  const q = qEl.value.trim().toLowerCase();
-  if (!q) { loadOrders(); return; }
-  // fetch recent 500 and filter client-side (simple)
-  try {
-    const { data } = await supabase.from('orders').select('*').order('created_at',{ascending:false}).limit(500);
-    const filtered = (data||[]).filter(o => {
-      const name = (o.customer_name||o.name||'').toString().toLowerCase();
-      const phone = (o.phone||'').toString();
-      return name.includes(q) || phone.includes(q) || (o.email||'').toString().toLowerCase().includes(q);
-    });
-    renderOrders(filtered);
-  } catch (err) {
-    ordersEl.innerHTML = 'Search failed: ' + err.message;
-  }
+// Search filter
+searchInput.addEventListener('input', ()=>{
+  const term = searchInput.value.toLowerCase();
+  const rows = tableBody.querySelectorAll('tr');
+  rows.forEach(r=>{
+    const name = r.cells[1].textContent.toLowerCase();
+    const mobile = r.cells[2].textContent.toLowerCase();
+    r.style.display = (name.includes(term) || mobile.includes(term)) ? '' : 'none';
+  });
 });
 
-document.getElementById('refreshBtn').addEventListener('click', loadOrders);
-filterEl.addEventListener('change', loadOrders);
-
-loadOrders();
+fetchOrders();
 </script>
 </body>
 </html>
