@@ -327,9 +327,8 @@ document.getElementById('payBtn').addEventListener('click',async()=>{
 if (stripeError) { 
   throw stripeError; 
 }
-
 // Payment succeeded, redirect WITH PID
-const paymentIntentId = intentRes.paymentIntent.id;
+const paymentIntentId = paymentIntent.id;
 window.location = `success.html?pid=${paymentIntentId}`;
 
 } catch (err) {
@@ -338,8 +337,8 @@ window.location = `success.html?pid=${paymentIntentId}`;
   payBtn.disabled = false;
 }
 });
-
 </script>
 </body>
 </html>
+
 
