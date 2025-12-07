@@ -6,6 +6,7 @@
 <title>GroceryGo | Order Success</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
+/* --- Layout and Color Variables --- */
 :root {
     --primary-color: #DC143C; /* Crimson */
     --secondary-color: #003893; /* Nepali Blue */
@@ -17,10 +18,10 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Poppins', sans-serif; background: var(--bg-color); color: var(--text-color); line-height: 1.6; }
 
+/* Header/Navigation styles */
 header {background:linear-gradient(to right,var(--primary-color),var(--secondary-color));color:#fff;padding:15px 10px;text-align:center;position:sticky;top:0;z-index:1000;}
 header h1{margin:0 0 5px 0;font-size:30px;font-weight:900;display:flex;justify-content:center;align-items:center;height:60px;}
 
-/* Main Container: Limits width on desktop, but allows full width on mobile */
 .container { width: 95%; max-width: 800px; margin: 30px auto; padding: 0 15px; }
 
 .confirmation-box {
@@ -53,7 +54,7 @@ header h1{margin:0 0 5px 0;font-size:30px;font-weight:900;display:flex;justify-c
     border-radius: 8px;
     text-align: left;
     margin: 25px 0;
-    display: flex; /* Key for two columns on desktop */
+    display: flex; 
     justify-content: space-between;
 }
 .address-box div { flex: 1; padding: 0 10px; }
@@ -68,18 +69,16 @@ header h1{margin:0 0 5px 0;font-size:30px;font-weight:900;display:flex;justify-c
     border-collapse: collapse; 
     margin-top: 15px; 
     display: block; 
-    overflow-x: auto; /* Allows horizontal scrolling on small screens */
+    overflow-x: auto; 
     white-space: nowrap; 
 }
-
-/* Ensure table itself takes up full width of its container for scroll to work */
 #orderDetailsTable { width: 100%; min-width: 600px; } 
 
 .order-details th, .order-details td { 
     padding: 12px; 
     text-align: left; 
     border-bottom: 1px solid #eee; 
-    white-space: normal; /* Allow text wrapping within cells */
+    white-space: normal;
 }
 .order-details th { 
     background: #f0f0f0; 
@@ -118,20 +117,18 @@ footer { background: var(--secondary-color); color: white; text-align: center; p
     .order-number { font-size: 2em; }
     .confirmation-box p { font-size: 1em; }
 
-    /* Address Box: Stack columns vertically on small screens */
     .address-box {
         flex-direction: column;
         text-align: left;
     }
     .address-box div { padding: 0; }
     .slot-details { 
-        text-align: left; /* Align slot details left when stacked */
+        text-align: left; 
         margin-top: 15px; 
         padding-top: 15px;
-        border-top: 1px dashed #ddd; /* Separator for clarity */
+        border-top: 1px dashed #ddd; 
     }
     
-    /* Table: Ensures the table scrolling works without causing page overflow */
     .items-section { overflow-x: hidden; } 
     .order-details { overflow-x: auto; }
 }
@@ -219,14 +216,13 @@ function trackConversion(orderId, totalAmount) {
 
 async function loadOrder() {
   if (!orderNo) {
-    orderNumberEl.innerHTML = '<span>Your Order Number is:</span> N/A';
+    orderNumberEl.innerHTML = '<span>Your Order Number is:</span> N/A - Missing ID in URL';
     deliverySlotEl.textContent = 'N/A';
     deliveryAddressEl.textContent = 'Order ID missing.';
     tbody.innerHTML = `<tr><td colspan="5">Unable to load order details (No ID).</td></tr>`;
     return;
   }
 
-  // Fetch order using the order_number passed via the URL
   const { data: order, error } = await supabase
     .from('orders')
     .select('*')
@@ -234,17 +230,18 @@ async function loadOrder() {
     .single();
 
   if (error || !order) {
-    orderNumberEl.innerHTML = `<span>Your Order Number is:</span> Error`;
+    orderNumberEl.innerHTML = `<span>Error Fetching Order:</span> ${orderNo}`;
     deliverySlotEl.textContent = 'Error';
     deliveryAddressEl.textContent = 'Error fetching details.';
-    tbody.innerHTML = `<tr><td colspan="5">Error: ${error?.message || 'Order not found.'}</td></tr>`;
-    console.error('Supabase fetch error:', error);
+    tbody.innerHTML = `<tr><td colspan="5">Error: ${error?.message || 'Order not found.'} Check console for details.</td></tr>`;
+    console.error('Supabase fetch error for orderNo:', orderNo, error);
     return;
   }
   
   // --- Data Display ---
-  // Displaying the exact order_number from the Supabase record
-  orderNumberEl.innerHTML = `<span>Your Order Number is:</span> ${order.order_number || 'Unknown'}`;
+  // THIS IS THE CRITICAL LINE: Prioritizes order_number, falls back to Supabase 'id'
+  const finalOrderNumber = order.order_number || order.id || 'Unknown';
+  orderNumberEl.innerHTML = `<span>Your Order Number is:</span> ${finalOrderNumber}`;
 
   // Display Delivery Address
   const address = `
@@ -261,9 +258,9 @@ async function loadOrder() {
   deliverySlotEl.textContent = slotTime;
   
   // Track Conversion
-  trackConversion(order.order_number, order.total?.toFixed(2));
+  trackConversion(finalOrderNumber, order.total?.toFixed(2));
   
-  // Items Table: Checks for 'items' (standard) or 'trolley' (your custom name)
+  // Items Table
   const itemsToDisplay = order.items && Array.isArray(order.items) && order.items.length > 0 
     ? order.items 
     : (order.trolley || []);
