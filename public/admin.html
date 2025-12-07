@@ -109,15 +109,17 @@ table { min-width: 1200px; }
     </div>
 </div>
 
-<script type="module">
-// ----------------------------------------------------------------
-// FIX 1: CORRECTED CDN link to resolve the 'Uncaught SyntaxError'
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-// FIX 2: VERIFIED SUPABASE KEYS
+<script>
+// --- CORRECTED INITIALIZATION BLOCK ---
+
+// VERIFIED SUPABASE KEYS
 const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis';
-const supabase = createClient(supabaseUrl, supabaseKey);
+
+// FIX: Renamed the client variable to supabaseClient to avoid ReferenceError 
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); 
 // ----------------------------------------------------------------
 
 // Global variable to store all fetched orders
@@ -206,13 +208,14 @@ function searchOrders() {
  * Initial function to fetch all orders from Supabase.
  */
 async function loadOrders() {
-    const { data: orders, error } = await supabase
+    // IMPORTANT: Using the corrected variable name: supabaseClient
+    const { data: orders, error } = await supabaseClient
         .from('orders') // Assumes table is named 'orders'
         .select('*')
         .order('created_at', { ascending: false });
 
     if (error) {
-        tbody.innerHTML = `<tr><td colspan="10">Error fetching orders: ${error.message}. **Check RLS (Row Level Security) settings.**</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10">Error fetching orders: ${error.message}. **Check RLS (Row Level Security) settings on your 'orders' table in Supabase.**</td></tr>`;
         console.error('Supabase fetch error:', error);
         return;
     }
