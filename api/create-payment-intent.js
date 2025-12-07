@@ -1,18 +1,23 @@
+// /api/create-payment-intent.js
+
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 
-// Stripe setup
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
+// Stripe
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: "2023-10-16",
+});
 
-// Supabase setup
+// Supabase (Service Role is required)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 export default async function handler(req, res) {
-  if (req.method !== "POST")
+  if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
 
   try {
     const {
@@ -29,64 +34,117 @@ export default async function handler(req, res) {
       state,
       subtotal,
       deliveryFee,
-      total
+      total,
     } = req.body;
 
-    // --- Validation ---
-    if (!Array.isArray(trolley) || trolley.length === 0)
-      return res.status(400).json({ error: "Trolley is empty" });
-    if (!name || !email || !mobile)
+    console.log("Received checkout:", req.body);
+
+    // -------------------------------
+    // VALIDATION
+    // -------------------------------
+    if (!Array.isArray(trolley) || trolley.length === 0) {
+      return res.status(400).json({ error: "Empty trolley" });
+    }
+
+    if (!name || !email || !mobile) {
       return res.status(400).json({ error: "Missing customer details" });
-    if (!slot)
+    }
+
+    if (!slot) {
       return res.status(400).json({ error: "Missing delivery slot" });
-    if (!total)
-      return res.status(400).json({ error: "Missing total amount" });
+    }
 
-    const amountInCents = Math.round(total * 100);
+    if (!total || Number(total) <= 0) {
+      return res.status(400).json({ error: "Invalid total" });
+    }
 
-    // --- Stripe PaymentIntent ---
+    const amountInCents = Math.round(Number(total) * 100);
+
+    // -------------------------------
+    // SHIPPING DETAILS (metadata)
+    // -------------------------------
+    const shippingDetails = {
+      unit: unit || "",
+      street: `${streetNo} ${streetName}`,
+      suburb,
+      postcode,
+      state,
+      deliveryFee,
+    };
+
+    // -------------------------------
+    // STRIPE PAYMENT INTENT
+    // -------------------------------
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: "aud",
       automatic_payment_methods: { enabled: true },
+
       metadata: {
         customer_name: name,
         customer_email: email,
         customer_mobile: mobile,
         delivery_slot: slot,
-        trolley_items_json: JSON.stringify(trolley),
-        subtotal: subtotal.toFixed(2),
-        delivery_fee: deliveryFee.toFixed(2),
-        grand_total: total.toFixed(2)
-      }
+        trolley_items: JSON.stringify(trolley),
+        shipping_details: JSON.stringify(shippingDetails),
+        subtotal: String(subtotal),
+        delivery_fee: String(deliveryFee),
+        grand_total: String(total),
+      },
     });
 
-    // --- Supabase insert ---
-    const fullAddress = `${streetNo} ${streetName}` + (unit ? `, Unit ${unit}` : '');
-    const { error: supabaseError } = await supabase.from('orders').insert([
+    // --------------------------------
+    // ORDER NUMBER
+    // --------------------------------
+    const orderNumber = "ORD-" + paymentIntent.id.slice(-8).toUpperCase();
+
+    // --------------------------------
+    // INSERT INITIAL ORDER RECORD
+    // (Webhook will update after payment)
+    // --------------------------------
+    const { error: insertError } = await supabase.from("orders").insert([
       {
+        order_number: orderNumber,
         customer_name: name,
-        customer_email: email,
-        customer_mobile: mobile,
-        delivery_slot: slot,
-        shipping_address: fullAddress,
+        email,
+        phone: mobile,
+
+        address_line1: `${streetNo} ${streetName}`,
+        address_line2: unit || null,
         suburb,
         postcode,
         state,
-        trolley_items: JSON.stringify(trolley),
-        subtotal,
-        delivery_fee: deliveryFee,
-        total,
-        payment_status: 'pending', // Will be updated later via webhook
-        stripe_payment_intent: paymentIntent.id
-      }
+
+        items: trolley,
+        total_amount: Number(total),
+        delivery_fee: Number(deliveryFee),
+
+        status: "pending",
+        fulfillment_status: "unfulfilled",
+
+        stripe_id: paymentIntent.id,
+        stripe_status: "requires_payment_method",
+
+        delivery_slot: slot,
+      },
     ]);
 
-    if (supabaseError) throw supabaseError;
+    if (insertError) {
+      console.error("Supabase Insert Error:", insertError);
+      return res.status(500).json({ error: "Order insert failed" });
+    }
 
-    res.status(200).json({ clientSecret: paymentIntent.client_secret });
+    // --------------------------------
+    // SEND CLIENT SECRET
+    // --------------------------------
+    return res.status(200).json({
+      clientSecret: paymentIntent.client_secret,
+      orderNumber,
+    });
   } catch (err) {
-    console.error("Payment Intent / Supabase Error:", err);
-    res.status(500).json({ error: err.message || "Server error occurred" });
+    console.error("Payment Intent Error:", err);
+    return res.status(500).json({
+      error: "Server error during payment intent creation",
+    });
   }
 }
