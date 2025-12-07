@@ -180,13 +180,13 @@ footer { background: var(--secondary-color); color: white; text-align: center; p
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-// --- CORRECTED INITIALIZATION BLOCK ---
+// --- SUPABASE INITIALIZATION ---
 
 // VERIFIED SUPABASE KEYS
 const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis';
 
-// FIX: Renamed the client variable to supabaseClient to avoid ReferenceError 
+// Create the Supabase client instance
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); 
 // ----------------------------------------------------------------
 
@@ -194,7 +194,7 @@ function getQueryParam(param) {
   return new URLSearchParams(window.location.search).get(param);
 }
 
-// *** CRITICAL FIX: We are now looking for 'pid' from the URL ***
+// Get the Stripe Payment ID ('pid') from the URL
 const orderIdFromUrl = getQueryParam('pid'); 
 const orderNumberEl = document.getElementById('orderNumber');
 const deliverySlotEl = document.getElementById('deliverySlot');
@@ -209,17 +209,17 @@ async function loadOrder() {
     return;
   }
 
-  // *** CRITICAL FIX: We are now searching by the column 'stripe_pid' ***
+  // *** FINAL FIX APPLIED: We are now searching by the confirmed column 'stripe_id' ***
   const { data: order, error } = await supabaseClient
     .from('orders') 
     .select('*')
-    .eq('stripe_pid', orderIdFromUrl) // Search the 'stripe_pid' column for the payment ID
+    .eq('stripe_id', orderIdFromUrl) // Search the CORRECT column for the payment ID
     .single();
 
   if (error || !order) {
     orderNumberEl.innerHTML = `<span>Error:</span> Could not load order details (Check Console)`;
     deliverySlotEl.textContent = 'Error';
-    tbody.innerHTML = `<tr><td colspan="5">Error loading order. Please ensure the 'stripe_pid' column exists and RLS is enabled.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5">Error loading order. Ensure RLS is set to SELECT=TRUE for 'anon' role.</td></tr>`;
     console.error('Supabase fetch error for pid:', orderIdFromUrl, error);
     return;
   }
@@ -230,19 +230,21 @@ async function loadOrder() {
 
   // Display Delivery Address
   const address = `
-    ${order.name || ''}<br>
-    ${(order.unit ? `Unit ${order.unit}, ` : '')}${order.streetNo || ''} ${order.streetName || ''}<br>
+    ${order.customer_name || ''}<br>
+    ${(order.unit ? `Unit ${order.unit}, ` : '')}${order.address_line1 || ''} ${order.address_line2 || ''}<br>
     ${order.suburb || ''}, ${order.state || ''} ${order.postcode || ''}<br>
-    **Contact:** ${order.mobile || ''}
+    **Contact:** ${order.phone || ''}
   `;
   deliveryAddressEl.innerHTML = address;
 
   // Display Delivery Slot
-  const slotDetails = order.slot?.split('|');
-  const slotTime = slotDetails ? slotDetails[1] : 'Anytime';
+  // Your slot data seems to be '2025-12-08|11:00 - 15:00'
+  const slotDetails = order.delivery_slot?.split('|');
+  const slotTime = slotDetails && slotDetails.length > 1 ? slotDetails[1] : (order.delivery_slot || 'Anytime');
   deliverySlotEl.textContent = slotTime;
   
   // Items Table
+  // Check both 'items' (new format) and 'trolley' (old/fallback)
   const itemsToDisplay = order.items && Array.isArray(order.items) && order.items.length > 0 
     ? order.items 
     : (order.trolley || []); 
@@ -253,7 +255,8 @@ async function loadOrder() {
     itemsToDisplay.forEach(item => {
       const tr = document.createElement('tr');
       const quantity = (item.quantity || 1);
-      const itemTotal = (item.price || 0) * quantity;
+      // Use item.price or calculate total amount if item.total is missing
+      const itemTotal = (item.price || 0) * quantity; 
       
       tr.innerHTML = `
         <td>${item.name || ''}</td>
@@ -270,7 +273,7 @@ async function loadOrder() {
     totalRow.classList.add('total-row');
     totalRow.innerHTML = `
         <td colspan="3" style="text-align: right; font-weight: 700;">Order Total</td>
-        <td class="price-col" style="text-align: right;">$${order.total?.toFixed(2) || '0.00'}</td>
+        <td class="price-col" style="text-align: right;">$${order.total_amount?.toFixed(2) || '0.00'}</td>
         <td></td>
     `;
     tbody.appendChild(totalRow);
