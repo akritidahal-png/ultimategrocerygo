@@ -1,65 +1,35 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GroceryGo — Order Success</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Order Confirmed</title>
 <style>
-  body{font-family:'Poppins',sans-serif;background:#f6f9fb;margin:0;padding:20px}
-  .wrap{max-width:720px;margin:40px auto;background:white;padding:20px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,0.06)}
-  h1{color:#0b5394}
-  .muted{color:#6b7280}
-  .order-id{font-weight:800;font-size:1.4rem;color:#0b5394}
-  pre{background:#f3f4f6;padding:10px;border-radius:8px;overflow:auto}
+body{font-family:sans-serif;background:#f8f9fa;color:#222;padding:20px;}
+.container{max-width:600px;margin:50px auto;background:white;padding:20px;border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1);}
+h1{color:#DC143C;}
+.summary-item{margin:10px 0;padding:6px 0;border-top:1px solid #eee;}
+.btn{display:inline-block;padding:10px 15px;background:#003893;color:white;text-decoration:none;border-radius:6px;margin-top:15px;}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Thanks — your order is confirmed</h1>
-  <p class="muted">We've received your order. Below is your order number and a short summary.</p>
-
-  <p>Order: <span id="orderId" class="order-id">LOADING...</span></p>
-
-  <div id="orderSummary" style="margin-top:10px">
-    <p class="muted">Order details:</p>
-    <pre id="orderJSON">Loading...</pre>
-  </div>
-
-  <p style="margin-top:12px"><a href="index.html">Back to home</a> — <a href="store.html">Continue shopping</a></p>
+<div class="container">
+<h1>Thanks — your order is confirmed</h1>
+<p>We've received your order. Below is your order number and a short summary.</p>
+<p>Order: <strong id="orderNumber">LOADING...</strong></p>
+<div id="orderDetails">Loading...</div>
+<a href="index.html" class="btn">Back to home — Continue shopping</a>
 </div>
 
-<script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-const SUPABASE_URL = "https://gikdqaxdqfmzdvolkxbn.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis";
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+<script>
+// Get order number from query param
 const params = new URLSearchParams(window.location.search);
-const orderParam = params.get('order');
-const orderIdEl = document.getElementById('orderId');
-const orderJSON = document.getElementById('orderJSON');
+const orderNum = params.get('order');
+document.getElementById('orderNumber').textContent = orderNum || 'N/A';
 
-if (!orderParam) {
-  orderIdEl.textContent = 'No order ID found';
-  orderJSON.textContent = 'Order details unavailable';
-} else {
-  orderIdEl.textContent = orderParam;
-  // Try to fetch order details
-  (async () => {
-    try {
-      const { data, error } = await supabase.from('orders').select('*').or(`id.eq.${orderParam},order_number.eq.${orderParam}`).limit(1).single();
-      if (error) { orderJSON.textContent = JSON.stringify({note:'Could not fetch order', error: error.message}, null, 2); return; }
-      // Pretty-print items if it's JSON string
-      if (data.items && typeof data.items === 'string') {
-        try { data.items = JSON.parse(data.items); } catch(e) {}
-      }
-      orderJSON.textContent = JSON.stringify(data, null, 2);
-    } catch (err) {
-      orderJSON.textContent = JSON.stringify({note:'Fetch failed', error: err.message}, null, 2);
-    }
-  })();
-}
+// Optionally, fetch order details from Supabase for this order
+// e.g., supabase.from('orders').select('*').eq('order_number', orderNum)
+document.getElementById('orderDetails').innerHTML = 'Order details will appear here (trolley summary can be fetched from Supabase).';
 </script>
 </body>
 </html>
