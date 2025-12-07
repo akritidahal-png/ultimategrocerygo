@@ -6,38 +6,10 @@
 <title>GroceryGo | Admin Orders</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
-:root{
-  --primary-color:#DC143C;
-  --secondary-color:#003893;
-  --highlight-color:#FFD700;
-  --bg-color:#f8f9fa;
-  --text-color:#222;
-  --border-color:#ddd;
-  --nepali-blue:#003893;
-}
-body{font-family:'Poppins',sans-serif;margin:0;background:var(--bg-color);color:var(--text-color);line-height:1.6}
-
-/* Header */
-header{background:linear-gradient(to right,var(--primary-color),var(--secondary-color));color:white;padding:15px 10px;text-align:center;position:sticky;top:0;z-index:1000}
-header h1{margin:0;font-size:30px;font-weight:900;display:flex;justify-content:center;align-items:center;letter-spacing:-2px}
-.logo-container{display:flex;align-items:center;position:relative;padding-left:10px}
-.logo-trolley-g{font-size:55px;color:white;font-weight:900;line-height:1;position:relative;padding-right:2px;text-shadow:1px 1px 0 var(--primary-color),2px 2px 2px rgba(0,0,0,0.5)}
-.logo-grocery-text{position:absolute;top:-4px;left:10px;font-size:14px;font-weight:700;color:#FF8C00;letter-spacing:0.5px;white-space:nowrap;text-shadow:0 0 1px rgba(0,0,0,0.4);transform:rotate(-5deg);padding:2px 4px;background:rgba(255,255,255,0.1);border-radius:3px}
-.logo-o{font-size:55px;color:white;font-weight:900;line-height:1;text-shadow:1px 1px 0 var(--primary-color),2px 2px 2px rgba(0,0,0,0.5);transform:translateX(-5px) rotate(2deg);position:relative;z-index:5}
-nav{margin-top:5px}
-nav a{color:white;text-decoration:none;margin:0 10px;font-weight:600;font-size:14px;padding:5px 0;display:inline-block}
-nav a:hover{text-decoration:underline}
-
-/* Container & table */
-.container{width:95%;max-width:1200px;margin:20px auto;padding:10px;background:white;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
-#searchInput{padding:8px;width:300px;margin-bottom:15px;border:1px solid var(--border-color);border-radius:6px;font-size:14px}
-table{width:100%;border-collapse:collapse;border-radius:8px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.06)}
-th,td{padding:10px;border-bottom:1px solid #eee;text-align:left;font-size:0.9em}
-th{background:var(--secondary-color);color:white;font-weight:600}
-tr:hover{background:#f1f1f1}
-
-/* Footer */
-footer{background: var(--nepali-blue);color: white;text-align: center;padding: 15px 0;font-size: 14px;margin-top: 40px}
+/* keep same header/footer styles as other pages */
+table{width:100%;border-collapse:collapse;margin-top:20px}
+th, td{border:1px solid #ccc;padding:8px;text-align:left}
+th{background:var(--nepali-blue);color:white}
 </style>
 </head>
 <body>
@@ -49,7 +21,6 @@ footer{background: var(--nepali-blue);color: white;text-align: center;padding: 1
       <span class="logo-o">o</span>
     </div>
   </h1>
-
   <nav>
     <a href="index.html">HOME</a>
     <a href="store.html">STORE</a>
@@ -59,13 +30,12 @@ footer{background: var(--nepali-blue);color: white;text-align: center;padding: 1
 </header>
 
 <div class="container">
-  <input type="text" id="searchInput" placeholder="Search by name, phone, or order #">
-
-  <table>
+  <h2>All Orders</h2>
+  <table id="ordersTable">
     <thead>
       <tr>
         <th>Order #</th>
-        <th>Name</th>
+        <th>Customer</th>
         <th>Email</th>
         <th>Phone</th>
         <th>Total</th>
@@ -73,8 +43,8 @@ footer{background: var(--nepali-blue);color: white;text-align: center;padding: 1
         <th>Status</th>
       </tr>
     </thead>
-    <tbody id="ordersBody">
-      <tr><td colspan="7" style="text-align:center;">Loading orders...</td></tr>
+    <tbody>
+      <tr><td colspan="7">Loading...</td></tr>
     </tbody>
   </table>
 </div>
@@ -82,68 +52,43 @@ footer{background: var(--nepali-blue);color: white;text-align: center;padding: 1
 <footer>© 2025 GroceryGo. All rights reserved.</footer>
 
 <script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
 // --- Supabase details ---
 const SUPABASE_URL = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let ordersData = [];
+const tbody = document.querySelector('#ordersTable tbody');
+tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
 
-async function loadOrders() {
-  const { data, error } = await supabase
-    .from('orders')
-    .select('*')
-    .order('created_at', { ascending: false });
+const { data: orders, error } = await supabase
+  .from('orders')
+  .select('*')
+  .order('created_at', { ascending: false });
 
-  if(error){
-    console.error(error);
-    document.getElementById('ordersBody').innerHTML = '<tr><td colspan="7" style="text-align:center;">Failed to load orders.</td></tr>';
-    return;
-  }
-
-  ordersData = data;
-  renderOrders(data);
-}
-
-function renderOrders(data) {
-  const tableBody = document.getElementById('ordersBody');
-  tableBody.innerHTML = '';
-  if(data.length === 0){
-    tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">No orders found.</td></tr>';
-    return;
-  }
-  data.forEach(order => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${order.order_number}</td>
-      <td>${order.customer_name}</td>
-      <td>${order.email}</td>
-      <td>${order.phone}</td>
-      <td>$${Number(order.total_amount).toFixed(2)}</td>
-      <td>${order.delivery_slot}</td>
-      <td>${order.status}</td>
+if(error){
+  tbody.innerHTML = `<tr><td colspan="7">Error loading orders</td></tr>`;
+  console.error(error);
+} else if(orders.length === 0){
+  tbody.innerHTML = `<tr><td colspan="7">No orders found</td></tr>`;
+} else {
+  tbody.innerHTML = '';
+  orders.forEach(o => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${o.order_number}</td>
+      <td>${o.customer_name}</td>
+      <td>${o.email}</td>
+      <td>${o.phone}</td>
+      <td>$${o.total_amount}</td>
+      <td>${o.delivery_slot}</td>
+      <td>${o.status}</td>
     `;
-    tableBody.appendChild(row);
+    tbody.appendChild(tr);
   });
 }
-
-// Search functionality
-document.getElementById('searchInput').addEventListener('input', (e) => {
-  const term = e.target.value.toLowerCase();
-  const filtered = ordersData.filter(o =>
-    o.customer_name.toLowerCase().includes(term) ||
-    o.phone.toLowerCase().includes(term) ||
-    o.order_number.toLowerCase().includes(term)
-  );
-  renderOrders(filtered);
-});
-
-// Initial load
-loadOrders();
 </script>
 
 </body>
 </html>
-
