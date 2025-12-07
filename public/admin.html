@@ -111,8 +111,8 @@ table { min-width: 1200px; }
 
 <script type="module">
 // ----------------------------------------------------------------
-// FIX 1: Corrected CDN link for Supabase
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+// FIX 1: CORRECTED CDN link to resolve the 'Uncaught SyntaxError'
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
 
 // FIX 2: VERIFIED SUPABASE KEYS
 const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
