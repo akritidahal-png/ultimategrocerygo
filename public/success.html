@@ -6,7 +6,46 @@
 <title>GroceryGo | Order Success</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
-/* keep your interface styles as before */
+:root {
+  --primary-color:#DC143C;
+  --secondary-color:#003893;
+  --highlight-color:#FFD700;
+  --bg-color:#f8f9fa;
+  --text-color:#222;
+  --border-color:#ddd;
+  --nepali-blue:#003893;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Poppins',sans-serif; background:var(--bg-color); color:var(--text-color); line-height:1.6; }
+header {
+  background:linear-gradient(to right,var(--primary-color),var(--secondary-color));
+  color:#fff;
+  padding:15px 10px 5px 10px;
+  text-align:center;
+  position:sticky;
+  top:0;
+  z-index:1000;
+}
+header h1 { margin:0 0 5px 0; font-size:30px; font-weight:900; display:flex; justify-content:center; align-items:center; height:60px; letter-spacing:-2px; }
+.logo-container { display:flex; align-items:center; position:relative; padding-left:10px; }
+.logo-trolley-g { font-size:55px; color:white; font-weight:900; line-height:1; position:relative; padding-right:2px; text-shadow:1px 1px 0 var(--primary-color),2px 2px 2px rgba(0,0,0,0.5); }
+.logo-grocery-text { position:absolute; top:-4px; left:10px; font-size:14px; font-weight:700; color:#FF8C00; letter-spacing:0.5px; white-space:nowrap; text-shadow:0 0 1px rgba(0,0,0,0.4); z-index:10; transform:rotate(-5deg); padding:2px 4px; background:rgba(255,255,255,0.1); border-radius:3px; }
+.logo-o { font-size:55px; color:white; font-weight:900; line-height:1; text-shadow:1px 1px 0 var(--primary-color),2px 2px 2px rgba(0,0,0,0.5); transform:translateX(-5px) rotate(2deg); position:relative; z-index:5; }
+nav { margin-top:5px; }
+nav a { color:white; text-decoration:none; margin:0 10px; font-weight:600; font-size:14px; padding:5px 0; display:inline-block; }
+nav a:hover { text-decoration:underline; }
+
+.container { width:95%; max-width:1200px; margin:20px auto; padding:10px; text-align:center; }
+h2 { margin-bottom:10px; }
+
+.order-number { font-size:1.5em; font-weight:700; color:var(--primary-color); margin:10px 0; }
+.order-details { margin-top:20px; width:100%; max-width:800px; margin-left:auto; margin-right:auto; border-collapse:collapse; }
+.order-details th, .order-details td { border:1px solid #ccc; padding:8px; text-align:left; }
+.order-details th { background:var(--nepali-blue); color:white; }
+
+footer { background: var(--nepali-blue); color: white; text-align: center; padding: 15px 0; font-size: 14px; margin-top: 40px; }
+
+.btn-home { display:inline-block; margin-top:20px; padding:10px 16px; border-radius:8px; background:var(--primary-color); color:white; text-decoration:none; font-weight:600; }
 </style>
 </head>
 <body>
@@ -30,7 +69,22 @@
   <h2>Thanks — Your Order is Confirmed!</h2>
   <p>We've received your order. Your order number is shown below for reference:</p>
   <div class="order-number" id="orderNumber">Loading...</div>
-  <p>Your order details will be emailed to you shortly.</p>
+
+  <table class="order-details" id="orderDetails">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Brand</th>
+        <th>Variant</th>
+        <th>Price</th>
+        <th>Quantity</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="5">Fetching your order details...</td></tr>
+    </tbody>
+  </table>
+
   <a href="index.html" class="btn-home">Back to Home — Continue Shopping</a>
 </div>
 
@@ -39,32 +93,61 @@
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-// --- Supabase details ---
-const SUPABASE_URL = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis";
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// ======= REPLACE THESE WITH YOUR REAL KEYS =======
+const supabaseUrl = 'https://xyzcompany.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.YourAnonKeyHere';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Get pid from URL
-const urlParams = new URLSearchParams(window.location.search);
-const pid = urlParams.get('pid');
+function getQueryParam(param) {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get(param);
+}
+
+const paymentIntentId = getQueryParam('pid');
 const orderNumberEl = document.getElementById('orderNumber');
+const tbody = document.querySelector('#orderDetails tbody');
 
-if(!pid){
-  orderNumberEl.textContent = 'Order number not found';
-} else {
-  const { data, error } = await supabase
+async function loadOrder() {
+  if(!paymentIntentId) {
+    orderNumberEl.textContent = 'Order ID not found';
+    return;
+  }
+
+  const { data: order, error } = await supabase
     .from('orders')
-    .select('order_number')
-    .eq('stripe_id', pid)
+    .select('*')
+    .eq('stripe_id', paymentIntentId)
     .single();
 
-  if(error || !data){
-    orderNumberEl.textContent = 'Error fetching order number';
+  if(error || !order) {
+    orderNumberEl.textContent = 'Error fetching order';
+    tbody.innerHTML = `<tr><td colspan="5">Unable to load order details</td></tr>`;
     console.error(error);
+    return;
+  }
+
+  orderNumberEl.textContent = order.order_number;
+
+  if(order.items && Array.isArray(order.items)) {
+    tbody.innerHTML = '';
+    order.items.forEach(item => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${item.name}</td>
+        <td>${item.brand || ''}</td>
+        <td>${item.variant || ''}</td>
+        <td>$${item.price}</td>
+        <td>${item.quantity}</td>
+      `;
+      tbody.appendChild(tr);
+    });
   } else {
-    orderNumberEl.textContent = data.order_number;
+    tbody.innerHTML = `<tr><td colspan="5">No items found</td></tr>`;
   }
 }
+
+loadOrder();
 </script>
+
 </body>
 </html>
