@@ -93,9 +93,9 @@ footer { background: var(--nepali-blue); color: white; text-align: center; paddi
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-// ======= REPLACE THESE WITH YOUR REAL KEYS =======
+// ======= REPLACE WITH YOUR KEYS =======
 const supabaseUrl = 'https://xyzcompany.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.YourAnonKeyHere';
+const supabaseKey = 'YourAnonKeyHere';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 function getQueryParam(param) {
@@ -103,12 +103,12 @@ function getQueryParam(param) {
   return urlParams.get(param);
 }
 
-const paymentIntentId = getQueryParam('pid');
+const orderNo = getQueryParam('orderNo');
 const orderNumberEl = document.getElementById('orderNumber');
 const tbody = document.querySelector('#orderDetails tbody');
 
 async function loadOrder() {
-  if(!paymentIntentId) {
+  if (!orderNo) {
     orderNumberEl.textContent = 'Order ID not found';
     return;
   }
@@ -116,10 +116,10 @@ async function loadOrder() {
   const { data: order, error } = await supabase
     .from('orders')
     .select('*')
-    .eq('stripe_id', paymentIntentId)
+    .eq('order_number', orderNo)
     .single();
 
-  if(error || !order) {
+  if (error || !order) {
     orderNumberEl.textContent = 'Error fetching order';
     tbody.innerHTML = `<tr><td colspan="5">Unable to load order details</td></tr>`;
     console.error(error);
@@ -128,7 +128,7 @@ async function loadOrder() {
 
   orderNumberEl.textContent = order.order_number;
 
-  if(order.items && Array.isArray(order.items)) {
+  if (order.items && Array.isArray(order.items)) {
     tbody.innerHTML = '';
     order.items.forEach(item => {
       const tr = document.createElement('tr');
@@ -149,5 +149,7 @@ async function loadOrder() {
 loadOrder();
 </script>
 
+
 </body>
 </html>
+
