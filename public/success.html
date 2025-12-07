@@ -52,9 +52,9 @@ footer{background: var(--nepali-blue); color: white; text-align: center; padding
 <footer>© 2025 GroceryGo. All rights reserved.</footer>
 
 <script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js"; // FIX APPLIED HERE
 
-// Supabase config (USE YOUR ACTUAL KEYS)
+// Supabase config
 const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis';
 const supabase = createClient(supabaseUrl, supabaseKey)
@@ -119,3 +119,4 @@ loadOrder();
 </script>
 </body>
 </html>
+
