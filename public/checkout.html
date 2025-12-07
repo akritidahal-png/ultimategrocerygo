@@ -150,66 +150,69 @@ footer{background:var(--nepali-blue);color:white;text-align:center;padding:15px 
 </footer>
 
 <script src="https://js.stripe.com/v3/"></script>
-<script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
 const STRIPE_PUBLISHABLE_KEY = 'pk_test_XXXXXXXXXXXXXXXXXXXXXXXX';
 const CREATE_PAYMENT_INTENT_URL = '/api/create-payment-intent';
-
-// Full approved postcodes
-const approvedPostcodes = ["4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018","4025","4029","4030","4031","4032","4034","4035","4036","4051","4053","4054","4055","4059","4060","4061","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075","4076","4077","4078","4101","4102","4103","4104","4105","4106","4107","4108","4109","4110","4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123","4124","4125","4127","4128","4129","4130","4132","4133","4151","4152","4153","4154","4155","4156","4157","4158","4159","4160","4161","4163","4164","4165","4169","4170","4171","4172","4173","4174","4178","4179","4183","4184","4205","4207","4280","4285","4300","4301","4303","4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504","4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517","4518","4519","4520","4521"];
-
-// Zones
-const ZONES = {
-1:["4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018","4025","4029","4030","4031","4032","4034","4035","4036"],
-2:["4051","4053","4054","4055","4059","4060","4061","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075","4076","4077","4078"],
-3:["4101","4102","4103","4104","4105","4106","4107","4108","4109","4110","4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123","4124","4125","4127","4128","4129","4130","4132","4133","4151","4152","4153","4154","4155","4156","4157","4158","4159","4160","4161","4163","4164","4165","4169","4170","4171","4172","4173","4174","4178","4179","4183","4184","4205","4207","4280","4285","4300","4301","4303","4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504","4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517","4518","4519","4520","4521"]
-};
+const SUPABASE_URL = 'https://YOUR_SUPABASE_PROJECT_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Stripe
 const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
 const elements = stripe.elements();
-const cardElement = elements.create('card', { wallet: 'never' });
+const cardElement = elements.create('card');
 cardElement.mount('#card-element');
 
+// DOM
 const payBtn = document.getElementById('payBtn');
 const backTrolleyBtn = document.getElementById('backTrolleyBtn');
 const slotSelect = document.getElementById('slotSelect');
 const postcodeInput = document.getElementById('postcode');
+const payMessage = document.getElementById('payMessage');
 
 // Trolley
-let trolley=[];
-try{
-  trolley=JSON.parse(localStorage.getItem('grocerygo_trolley')||'[]');
-  trolley=trolley.map(i=>({id:i.id,name:i.name||i.title||'',price:Number(i.price)||0,quantity:Number(i.quantity)||1}));
-}catch(e){trolley=[];}
+let trolley = [];
+try {
+  trolley = JSON.parse(localStorage.getItem('grocerygo_trolley') || '[]');
+  trolley = trolley.map(i => ({id:i.id, name:i.name||i.title||'', price:Number(i.price)||0, quantity:Number(i.quantity)||1}));
+} catch(e){ trolley=[]; }
 
 // Totals
 function updateTotals(){
-  const subtotal=trolley.reduce((s,i)=>s+(i.price*i.quantity),0);
-  const deliveryFee=subtotal>=120?0:10;
-  const total=subtotal+deliveryFee;
+  const subtotal = trolley.reduce((s,i)=>s+i.price*i.quantity,0);
+  const deliveryFee = subtotal>=120?0:10;
+  const total = subtotal+deliveryFee;
   document.getElementById('subtotalText').textContent='$'+subtotal.toFixed(2);
   document.getElementById('deliveryFeeText').textContent='$'+deliveryFee.toFixed(2);
   document.getElementById('totalText').textContent='$'+total.toFixed(2);
-  return {subtotal,deliveryFee,total};
+  return {subtotal, deliveryFee, total};
 }
-const totals=updateTotals();
+const totals = updateTotals();
 
-// Time slots
+// Approved postcodes & zones
+const approvedPostcodes = ["4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018","4025","4029","4030","4031","4032","4034","4035","4036","4051","4053","4054","4055","4059","4060","4061","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075","4076","4077","4078","4101","4102","4103","4104","4105","4106","4107","4108","4109","4110","4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123","4124","4125","4127","4128","4129","4130","4132","4133","4151","4152","4153","4154","4155","4156","4157","4158","4159","4160","4161","4163","4164","4165","4169","4170","4171","4172","4173","4174","4178","4179","4183","4184","4205","4207","4280","4285","4300","4301","4303","4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504","4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517","4518","4519","4520","4521"];
+const ZONES = {1:["4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018","4025","4029","4030","4031","4032","4034","4035","4036"],2:["4051","4053","4054","4055","4059","4060","4061","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075","4076","4077","4078"],3:["4101","4102","4103","4104","4105","4106","4107","4108","4109","4110","4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123","4124","4125","4127","4128","4129","4130","4132","4133","4151","4152","4153","4154","4155","4156","4157","4158","4159","4160","4161","4163","4164","4165","4169","4170","4171","4172","4173","4174","4178","4179","4183","4184","4205","4207","4280","4285","4300","4301","4303","4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504","4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517","4518","4519","4520","4521"]};
 const TIME_BLOCKS = ["8:00 - 11:00","11:00 - 15:00","15:00 - 19:00"];
-function getZoneByPostcode(pc){for(const z in ZONES){if(ZONES[z].includes(pc)) return parseInt(z);} return null;}
+
+function getZoneByPostcode(pc){ for(const z in ZONES){ if(ZONES[z].includes(pc)) return parseInt(z); } return null; }
+
 function generateSlots(pc){
   const zone=getZoneByPostcode(pc);
-  if(!zone){slotSelect.disabled=true; return;}
+  if(!zone){ slotSelect.disabled=true; slotSelect.innerHTML='<option value="">Enter postcode to see available slots</option>'; return; }
   slotSelect.disabled=false;
   slotSelect.innerHTML='<option value="">Select a delivery slot</option>';
-  let day=new Date(), added=0;
+  const now = new Date();
+  let day = new Date();
+  let added=0;
   while(added<6){
     if(day.getDay()!==0){
       for(let i=0;i<3&&added<6;i++){
-        const slotTime=TIME_BLOCKS[i];
-        const opt=document.createElement('option');
-        opt.value=`${day.toISOString().slice(0,10)}|${slotTime}`;
-        opt.textContent=`${day.toDateString()} — ${slotTime}`;
+        const slotTime = TIME_BLOCKS[i];
+        const opt = document.createElement('option');
+        opt.value = `${day.toISOString().slice(0,10)}|${slotTime}`;
+        opt.textContent = `${day.toDateString()} — ${slotTime}`;
         slotSelect.appendChild(opt);
         added++;
       }
@@ -218,9 +221,8 @@ function generateSlots(pc){
   }
 }
 
-// Postcode input
 postcodeInput.addEventListener('input',()=>{
-  const pc=postcodeInput.value.trim();
+  const pc = postcodeInput.value.trim();
   if(!approvedPostcodes.includes(pc)){
     document.getElementById('postcodeError').style.display='block';
     slotSelect.disabled=true; slotSelect.innerHTML='<option value="">Enter postcode to see available slots</option>';
@@ -229,42 +231,56 @@ postcodeInput.addEventListener('input',()=>{
   }
   document.getElementById('postcodeError').style.display='none';
   generateSlots(pc);
+  checkPayButton();
 });
 
-// Enable pay button
 function checkPayButton(){
-  const required=['name','mobile','email','streetNo','streetName','suburb','postcode'];
-  const filled=required.every(id=>document.getElementById(id).value.trim()!=='');
-  payBtn.disabled=!(filled && slotSelect.value && trolley.length>0);
+  const required = ['name','mobile','email','streetNo','streetName','suburb','postcode'];
+  const filled = required.every(id => document.getElementById(id).value.trim()!=='');
+  payBtn.disabled = !(filled && slotSelect.value && trolley.length>0);
 }
+
 document.querySelectorAll('input, select').forEach(el=>el.addEventListener('input',checkPayButton));
 slotSelect.addEventListener('change',checkPayButton);
 
-// Pay click
-payBtn.addEventListener('click',async()=>{
+// Payment
+payBtn.addEventListener('click', async ()=>{
   payBtn.disabled=true;
+  payMessage.textContent='Processing...';
+
   const customer={name:document.getElementById('name').value,email:document.getElementById('email').value,mobile:document.getElementById('mobile').value};
   const shipping={unit:document.getElementById('unit').value,streetNo:document.getElementById('streetNo').value,streetName:document.getElementById('streetName').value,suburb:document.getElementById('suburb').value,postcode:document.getElementById('postcode').value,state:document.getElementById('state').value};
-  const deliverySlot=slotSelect.value;
+  const deliverySlot = slotSelect.value;
+
   try{
-    const resp=await fetch(CREATE_PAYMENT_INTENT_URL,{
+    // Save order to Supabase
+    const { data, error } = await supabase.from('orders').insert([{...customer, ...shipping, trolley:JSON.stringify(trolley), subtotal:totals.subtotal, deliveryFee:totals.deliveryFee, total:totals.total, slot:deliverySlot, status:'pending'}]);
+    if(error) throw error;
+
+    // Create Payment Intent
+    const resp = await fetch(CREATE_PAYMENT_INTENT_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({trolley,subtotal:totals.subtotal,deliveryFee:totals.deliveryFee,total:totals.total,...customer,...shipping,slot:deliverySlot})
+      body:JSON.stringify({total:totals.total})
     });
-    const data=await resp.json();
-    if(resp.status!==200){throw new Error(data.error||'Payment failed');}
-    const {error:stripeErr}=await stripe.confirmCardPayment(data.clientSecret,{payment_method:{card:cardElement,billing_details:{name:customer.name,email:customer.email,phone:customer.mobile}}});
+    const piData = await resp.json();
+    if(resp.status!==200) throw new Error(piData.error || 'Payment failed');
+
+    // Confirm card
+    const { error:stripeErr } = await stripe.confirmCardPayment(piData.clientSecret,{payment_method:{card:cardElement,billing_details:{name:customer.name,email:customer.email,phone:customer.mobile}}});
     if(stripeErr) throw stripeErr;
+
+    // Update order status
+    await supabase.from('orders').update({status:'paid'}).eq('id', data[0].id);
+
     localStorage.removeItem('grocerygo_trolley');
     window.location.href='order-success.html';
   }catch(e){
-    document.getElementById('payMessage').textContent=e.message;
+    payMessage.textContent=e.message;
     payBtn.disabled=false;
   }
 });
 
-// Back button
 backTrolleyBtn.addEventListener('click',()=>{window.location.href='trolley.html';});
 </script>
 </body>
