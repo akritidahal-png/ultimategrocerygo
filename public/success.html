@@ -8,10 +8,10 @@
 <style>
 /* --- Layout and Color Variables --- */
 :root {
-    --primary-color: #DC143C; /* Crimson */
-    --secondary-color: #003893; /* Nepali Blue */
-    --success-color: #28a745; /* Green */
-    --bg-color: #f8f9fa; /* Light Background */
+    --primary-color: #DC143C;
+    --secondary-color: #003893;
+    --success-color: #28a745;
+    --bg-color: #f8f9fa;
     --text-color: #333;
     --card-bg: #fff;
 }
@@ -111,24 +111,13 @@ footer { background: var(--secondary-color); color: white; text-align: center; p
 /* --- MOBILE OPTIMIZATION --- */
 @media (max-width: 600px) {
     .container { margin: 20px auto; padding: 0 10px; }
-    
     .confirmation-box { padding: 25px 15px; }
     .confirmation-box h2 { font-size: 1.5em; }
     .order-number { font-size: 2em; }
     .confirmation-box p { font-size: 1em; }
-
-    .address-box {
-        flex-direction: column;
-        text-align: left;
-    }
+    .address-box { flex-direction: column; text-align: left; }
     .address-box div { padding: 0; }
-    .slot-details { 
-        text-align: left; 
-        margin-top: 15px; 
-        padding-top: 15px;
-        border-top: 1px dashed #ddd; 
-    }
-    
+    .slot-details { text-align: left; margin-top: 15px; padding-top: 15px; border-top: 1px dashed #ddd; }
     .items-section { overflow-x: hidden; } 
     .order-details { overflow-x: auto; }
 }
@@ -189,13 +178,15 @@ footer { background: var(--secondary-color); color: white; text-align: center; p
 <footer>© 2025 GroceryGo. All rights reserved.</footer>
 
 <script type="module">
-// RELIABLE SUPABASE IMPORT FIX
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/module.js";
+// ----------------------------------------------------------------
+// FIX 1: Corrected CDN link for Supabase
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
 
-// Supabase config (Now using the verified keys)
+// FIX 2: VERIFIED SUPABASE KEYS
 const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis';
 const supabase = createClient(supabaseUrl, supabaseKey);
+// ----------------------------------------------------------------
 
 function getQueryParam(param) {
   return new URLSearchParams(window.location.search).get(param);
@@ -207,41 +198,34 @@ const deliverySlotEl = document.getElementById('deliverySlot');
 const deliveryAddressEl = document.getElementById('deliveryAddress');
 const tbody = document.querySelector('#orderDetailsTable tbody');
 
-// Placeholder for external conversion tracking
-function trackConversion(orderId, totalAmount) {
-    console.log(`[Analytics] Conversion tracked: Order ID ${orderId}, Amount $${totalAmount}`);
-    // Add actual tracking code here (e.g., Google Analytics, Facebook Pixel)
-}
-
-
 async function loadOrder() {
   if (!orderNo) {
-    orderNumberEl.innerHTML = '<span>Your Order Number is:</span> N/A - Missing ID in URL';
+    orderNumberEl.innerHTML = '<span>Order Number is:</span> N/A - Missing ID in URL';
     deliverySlotEl.textContent = 'N/A';
-    deliveryAddressEl.textContent = 'Order ID missing.';
-    tbody.innerHTML = `<tr><td colspan="5">Unable to load order details (No ID).</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5">Unable to load order details (No ID in URL).</td></tr>`;
     return;
   }
 
+  // Primary attempt: Query by 'order_number'
   const { data: order, error } = await supabase
     .from('orders')
     .select('*')
-    .eq('order_number', orderNo)
+    .eq('order_number', orderNo) 
     .single();
 
   if (error || !order) {
-    orderNumberEl.innerHTML = `<span>Error Fetching Order:</span> ${orderNo}`;
+    // Fallback if the query fails (likely due to wrong column name or RLS)
+    orderNumberEl.innerHTML = `<span>Error:</span> Check Console (Code: ${error?.code || '404'})`;
     deliverySlotEl.textContent = 'Error';
-    deliveryAddressEl.textContent = 'Error fetching details.';
-    tbody.innerHTML = `<tr><td colspan="5">Error: ${error?.message || 'Order not found.'} Check console for details.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5">Error loading order. Check Console for Supabase error details (RLS or column name likely).</td></tr>`;
     console.error('Supabase fetch error for orderNo:', orderNo, error);
     return;
   }
   
   // --- Data Display ---
-  // THIS IS THE CRITICAL LINE: Prioritizes order_number, falls back to Supabase 'id'
+  // GUARANTEED ORDER NUMBER DISPLAY (Uses order_number, falls back to Supabase 'id')
   const finalOrderNumber = order.order_number || order.id || 'Unknown';
-  orderNumberEl.innerHTML = `<span>Your Order Number is:</span> ${finalOrderNumber}`;
+  orderNumberEl.innerHTML = `<span>Your Order Number is:</span> **${finalOrderNumber}**`;
 
   // Display Delivery Address
   const address = `
@@ -257,13 +241,10 @@ async function loadOrder() {
   const slotTime = slotDetails ? slotDetails[1] : 'Anytime';
   deliverySlotEl.textContent = slotTime;
   
-  // Track Conversion
-  trackConversion(finalOrderNumber, order.total?.toFixed(2));
-  
   // Items Table
   const itemsToDisplay = order.items && Array.isArray(order.items) && order.items.length > 0 
     ? order.items 
-    : (order.trolley || []);
+    : (order.trolley || []); // Fallback to 'trolley' column
 
   if (itemsToDisplay.length > 0) {
     tbody.innerHTML = '';
@@ -302,4 +283,3 @@ loadOrder();
 </script>
 </body>
 </html>
-
