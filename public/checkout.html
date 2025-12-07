@@ -270,72 +270,47 @@ const cardCVC = elements.create('cardCvc');
 cardNumber.mount('#cardNumber');
 cardExpiry.mount('#cardExpiry');
 cardCVC.mount('#cardCVC');
-
-document.getElementById('payBtn').addEventListener('click', async () => {
-  const payBtn = document.getElementById('payBtn');
-  const msg = document.getElementById('payMessage');
-  payBtn.disabled = true;
-  msg.textContent = 'Processing...';
-
-  const { subtotal, deliveryFee, total } = updateTotals();
-  const payload = {
+// Payment
+document.getElementById('payBtn').addEventListener('click',async()=>{
+  const payBtn=document.getElementById('payBtn');
+  const msg=document.getElementById('payMessage');
+  payBtn.disabled=true;
+  msg.textContent='Processing...';
+  const {subtotal,deliveryFee,total}=updateTotals();
+  const payload={
     trolley,
-    name: document.getElementById('name').value.trim(),
-    email: document.getElementById('email').value.trim(),
-    mobile: document.getElementById('mobile').value.trim(),
-    unit: document.getElementById('unit').value.trim(),
-    streetNo: document.getElementById('streetNo').value.trim(),
-    streetName: document.getElementById('streetName').value.trim(),
-    suburb: document.getElementById('suburb').value.trim(),
-    postcode: document.getElementById('postcode').value.trim(),
-    state: document.getElementById('state').value,
-    slot: slotSelect.value,
+    name:document.getElementById('name').value.trim(),
+    email:document.getElementById('email').value.trim(),
+    mobile:document.getElementById('mobile').value.trim(),
+    unit:document.getElementById('unit').value.trim(),
+    streetNo:document.getElementById('streetNo').value.trim(),
+    streetName:document.getElementById('streetName').value.trim(),
+    suburb:document.getElementById('suburb').value.trim(),
+    postcode:document.getElementById('postcode').value.trim(),
+    state:document.getElementById('state').value,
+    slot:slotSelect.value,
     subtotal,
     deliveryFee,
     total
   };
-
-  try {
-    const res = await fetch(CREATE_PAYMENT_INTENT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+  try{
+    const res = await fetch(CREATE_PAYMENT_INTENT_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Payment intent failed');
-
-    const paymentResult = await stripe.confirmCardPayment(data.clientSecret, {
-      payment_method: {
-        card: cardNumber,
-        billing_details: {
-          name: payload.name,
-          email: payload.email,
-          phone: payload.mobile
-        }
+    const data=await res.json();
+    if(!res.ok){throw new Error(data.error||'Payment intent failed');}
+    const {clientSecret}=data;
+    const {error:stripeError,paymentIntent}=await stripe.confirmCardPayment(clientSecret,{
+      payment_method:{
+        card:cardNumber,
+        billing_details:{name:payload.name,email:payload.email,phone:payload.mobile}
       }
     });
-
-    if (paymentResult.error) throw paymentResult.error;
-    const paymentIntent = paymentResult.paymentIntent;
-
-    const orderNo = 'GGX' + Math.floor(1000 + Math.random() * 9000);
-
-    const orderPayload = {
-      ...payload,
-      order_number: orderNo,
-      stripe_id: paymentIntent.id
-    };
-
-    const orderRes = await fetch(CREATE_ORDER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(orderPayload)
-    });
-    const orderData = await orderRes.json();
-    if (!orderRes.ok) throw new Error(orderData.error || 'Order saving failed');
-
-    window.location = `success.html?orderNo=${orderNo}`;
-
+    if(stripeError) throw stripeError;
+    const paymentIntentId = paymentIntent.id;
+    window.location = `success.html?pid=${paymentIntentId}`;
   } catch (err) {
     console.error(err);
     msg.textContent = 'Error: ' + err.message;
@@ -345,6 +320,7 @@ document.getElementById('payBtn').addEventListener('click', async () => {
 </script>
 </body>
 </html>
+
 
 
 
