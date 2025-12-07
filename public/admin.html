@@ -1,99 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>GroceryGo | Admin Orders</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
-:root {
-  --primary-color:#DC143C;
-  --secondary-color:#003893;
-  --highlight-color:#FFD700;
-  --bg-color:#f8f9fa;
-  --text-color:#222;
-  --border-color:#ddd;
-  --nepali-blue:#003893;
-}
-* { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'Poppins',sans-serif; background:var(--bg-color); color:var(--text-color); line-height:1.6; }
-header {
-  background:linear-gradient(to right,var(--primary-color),var(--secondary-color));
-  color:#fff;
-  padding:15px 10px 5px 10px;
-  text-align:center;
-  position:sticky;
-  top:0;
-  z-index:1000;
-}
-header h1 { margin:0 0 5px 0; font-size:30px; font-weight:900; display:flex; justify-content:center; align-items:center; height:60px; letter-spacing:-2px; }
-.logo-container { display:flex; align-items:center; position:relative; padding-left:10px; }
-.logo-trolley-g { font-size:55px; color:white; font-weight:900; line-height:1; position:relative; padding-right:2px; text-shadow:1px 1px 0 var(--primary-color),2px 2px 2px rgba(0,0,0,0.5); }
-.logo-grocery-text { position:absolute; top:-4px; left:10px; font-size:14px; font-weight:700; color:#FF8C00; letter-spacing:0.5px; white-space:nowrap; text-shadow:0 0 1px rgba(0,0,0,0.4); z-index:10; transform:rotate(-5deg); padding:2px 4px; background:rgba(255,255,255,0.1); border-radius:3px; }
-.logo-o { font-size:55px; color:white; font-weight:900; line-height:1; text-shadow:1px 1px 0 var(--primary-color),2px 2px 2px rgba(0,0,0,0.5); transform:translateX(-5px) rotate(2deg); position:relative; z-index:5; }
-nav { margin-top:5px; }
-nav a { color:white; text-decoration:none; margin:0 10px; font-weight:600; font-size:14px; padding:5px 0; display:inline-block; }
-nav a:hover { text-decoration:underline; }
-
-.container { width:95%; max-width:1200px; margin:20px auto; padding:10px; }
-h2 { margin-bottom:15px; }
-
-table { width:100%; border-collapse:collapse; margin-top:20px; background:white; border-radius:8px; overflow:hidden; box-shadow:0 4px 6px rgba(0,0,0,0.1); }
-th, td { border:1px solid #ccc; padding:8px; text-align:left; font-size:14px; }
-th { background:var(--nepali-blue); color:white; }
-tr:nth-child(even) { background:#f2f2f2; }
-
-footer { background: var(--nepali-blue); color: white; text-align: center; padding: 15px 0; font-size: 14px; margin-top: 40px; }
+body{font-family:'Poppins',sans-serif;margin:0;padding:0;background:#f8f9fa;color:#222;}
+header{background:#003893;color:white;padding:15px;text-align:center;}
+table{width:100%;border-collapse:collapse;margin:20px auto;}
+th,td{border:1px solid #ccc;padding:8px;text-align:left;}
+th{background:#003893;color:white;}
+.container{width:95%;max-width:1200px;margin:20px auto;}
 </style>
 </head>
 <body>
-
-<header>
-  <h1>
-    <div class="logo-container">
-      <span class="logo-trolley-g">G<span class="logo-grocery-text">Grocery</span></span>
-      <span class="logo-o">o</span>
-    </div>
-  </h1>
-  <nav>
-    <a href="index.html">HOME</a>
-    <a href="store.html">STORE</a>
-    <a href="about.html">ABOUT US</a>
-    <a href="contact.html">CONTACT</a>
-  </nav>
-</header>
-
+<header><h1>Admin Orders</h1></header>
 <div class="container">
-  <h2>All Orders</h2>
   <table id="ordersTable">
     <thead>
       <tr>
-        <th>Order #</th>
-        <th>Customer</th>
+        <th>Order No</th>
+        <th>Name</th>
         <th>Email</th>
-        <th>Phone</th>
+        <th>Mobile</th>
+        <th>Suburb</th>
+        <th>Postcode</th>
         <th>Total</th>
-        <th>Delivery Slot</th>
         <th>Status</th>
+        <th>Items</th>
       </tr>
     </thead>
-    <tbody>
-      <tr><td colspan="7">Loading...</td></tr>
-    </tbody>
+    <tbody><tr><td colspan="9">Loading orders...</td></tr></tbody>
   </table>
 </div>
-
-<footer>© 2025 GroceryGo. All rights reserved.</footer>
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis';
+const supabaseUrl = 'https://xyzcompany.supabase.co';
+const supabaseKey = 'YOUR_ANON_KEY_HERE';
 const supabase = createClient(supabaseUrl, supabaseKey);
-
-const tbody = document.querySelector('#ordersTable tbody');
-tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
 
 async function loadOrders() {
   const { data: orders, error } = await supabase
@@ -101,31 +48,31 @@ async function loadOrders() {
     .select('*')
     .order('created_at', { ascending: false });
 
-  if(error){
-    tbody.innerHTML = `<tr><td colspan="7">Error loading orders</td></tr>`;
-    console.error(error);
-  } else if(orders.length === 0){
-    tbody.innerHTML = `<tr><td colspan="7">No orders found</td></tr>`;
-  } else {
-    tbody.innerHTML = '';
-    orders.forEach(o => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${o.order_number}</td>
-        <td>${o.customer_name}</td>
-        <td>${o.email}</td>
-        <td>${o.phone}</td>
-        <td>$${o.total_amount}</td>
-        <td>${o.delivery_slot}</td>
-        <td>${o.status}</td>
-      `;
-      tbody.appendChild(tr);
-    });
+  const tbody = document.querySelector('#ordersTable tbody');
+  if (error || !orders.length) {
+    tbody.innerHTML = `<tr><td colspan="9">No orders found</td></tr>`;
+    return;
   }
+
+  tbody.innerHTML = '';
+  orders.forEach(order => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${order.order_number || ''}</td>
+      <td>${order.customer_name || ''}</td>
+      <td>${order.email || ''}</td>
+      <td>${order.phone || ''}</td>
+      <td>${order.suburb || ''}</td>
+      <td>${order.postcode || ''}</td>
+      <td>$${order.total_amount?.toFixed(2) || 0}</td>
+      <td>${order.status || ''}</td>
+      <td>${(order.items||[]).map(i=>i.name).join(', ')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
 
 loadOrders();
 </script>
-
 </body>
 </html>
