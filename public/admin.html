@@ -74,10 +74,12 @@ table { min-width: 1200px; }
     font-size: 0.85em;
     display: inline-block;
 }
-.status-Processing { background-color: #ffc107; color: #333; }
-.status-Shipped { background-color: #007bff; color: white; }
-.status-Delivered { background-color: #28a745; color: white; }
-.status-Cancelled { background-color: #dc3545; color: white; }
+/* Ensure these match your actual status strings in Supabase */
+.status-pending { background-color: #ffc107; color: #333; }
+.status-processing { background-color: #007bff; color: white; }
+.status-shipped { background-color: #17a2b8; color: white; }
+.status-delivered { background-color: #28a745; color: white; }
+.status-cancelled { background-color: #dc3545; color: white; }
 </style>
 </head>
 <body>
@@ -112,13 +114,15 @@ table { min-width: 1200px; }
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
-// --- CORRECTED INITIALIZATION BLOCK ---
+// --- SUPABASE INITIALIZATION ---
 
-// VERIFIED SUPABASE KEYS
+// VERIFIED SUPABASE KEYS (You must use the service role key here for full admin access, 
+// or ensure the 'anon' key has read access to ALL rows if you are using it.)
 const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis'; 
+// NOTE: For ADMIN pages, using the ANONYMOUS key requires RLS to be disabled or set to TRUE for SELECT.
+// The safer choice for admin is the SERVICE_ROLE key (found in Project Settings -> API) if you protect this page.
 
-// FIX: Renamed the client variable to supabaseClient to avoid ReferenceError 
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); 
 // ----------------------------------------------------------------
 
@@ -142,24 +146,26 @@ function renderOrders(ordersToRender) {
     ordersToRender.forEach(order => {
         const tr = document.createElement('tr');
         
-        // 1. Process Items List
-        const itemsArray = order.trolley || order.items || [];
+        // 1. Process Items List (uses the 'items' column)
+        const itemsArray = order.items || [];
         const itemsList = itemsArray.map(i => `${i.name || 'Item'} (x${i.quantity || 1})`).join('; ');
 
         // 2. Format Date
         const date = order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A';
 
-        // 3. Format Delivery Address
-        const address = `${order.streetNo || ''} ${order.streetName || ''}, ${order.suburb || ''}, ${order.postcode || ''}`;
+        // 3. Format Delivery Address (uses the confirmed columns)
+        const address = `${order.address_line1 || ''}${order.address_line2 ? ', ' + order.address_line2 : ''}, ${order.suburb || ''}, ${order.postcode || ''}`;
         
         // 4. Format Status Badge
-        const status = order.status || 'Processing';
-        const statusHtml = `<span class="status-badge status-${status.replace(/\s/g, '')}">${status}</span>`;
+        const status = order.status || 'pending'; // Default to pending if null
+        const statusClass = status.toLowerCase().replace(/\s/g, '');
+        const statusHtml = `<span class="status-badge status-${statusClass}">${status}</span>`;
 
-        // 5. Format Delivery Slot
-        const slot = order.slot?.split('|')[1] || 'N/A';
+        // 5. Format Delivery Slot (uses the confirmed column and extracts time)
+        const slotDetails = order.delivery_slot?.split('|');
+        const slotTime = slotDetails && slotDetails.length > 1 ? slotDetails[1] : (order.delivery_slot || 'Anytime');
 
-        // 6. GUARANTEED ORDER NUMBER DISPLAY (Uses order_number, falls back to Supabase 'id')
+        // 6. Order Number Display
         const finalOrderNumber = order.order_number || order.id || 'N/A';
 
 
@@ -167,11 +173,11 @@ function renderOrders(ordersToRender) {
             <td>${finalOrderNumber}</td> 
             <td>${date}</td>
             <td>${statusHtml}</td>
-            <td>$${order.total?.toFixed(2) || '0.00'}</td> 
-            <td>${order.name || ''}</td>
-            <td>${order.mobile || ''}</td> 
+            <td>$${order.total_amount?.toFixed(2) || '0.00'}</td> 
+            <td>${order.customer_name || ''}</td>
+            <td>${order.phone || ''}</td> 
             <td>${address}</td>
-            <td>${slot}</td>
+            <td>${slotTime}</td>
             <td>${itemsList}</td>
         `;
         tbody.appendChild(tr);
@@ -190,11 +196,11 @@ function searchOrders() {
     }
 
     const filteredOrders = allOrders.filter(order => {
-        // Create a single searchable string from the required fields
+        // Search against the confirmed customer-related columns
         const searchableText = [
-            order.name,
+            order.customer_name,
             order.postcode,
-            order.mobile,
+            order.phone, // using the correct column name 'phone'
             order.email
         ].join('|').toLowerCase(); 
 
@@ -208,14 +214,16 @@ function searchOrders() {
  * Initial function to fetch all orders from Supabase.
  */
 async function loadOrders() {
-    // IMPORTANT: Using the corrected variable name: supabaseClient
+    tbody.innerHTML = `<tr><td colspan="10">Fetching all orders...</td></tr>`;
+
+    // Fetch all columns
     const { data: orders, error } = await supabaseClient
-        .from('orders') // Assumes table is named 'orders'
+        .from('orders') 
         .select('*')
         .order('created_at', { ascending: false });
 
     if (error) {
-        tbody.innerHTML = `<tr><td colspan="10">Error fetching orders: ${error.message}. **Check RLS (Row Level Security) settings on your 'orders' table in Supabase.**</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10">Error fetching orders: ${error.message}. **ADMIN PAGE NOTE: Ensure RLS is disabled or set to TRUE for SELECT on your 'orders' table when using the ANONYMOUS key.**</td></tr>`;
         console.error('Supabase fetch error:', error);
         return;
     }
