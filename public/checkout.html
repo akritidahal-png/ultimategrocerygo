@@ -171,24 +171,28 @@ footer{background:var(--nepali-blue);color:white;text-align:center;padding:15px 
 
 <script src="https://js.stripe.com/v3/"></script>
 <script>
-// ---------------- CONFIG ----------------
+// --------------- CONFIG ----------------
 const STRIPE_PUBLISHABLE_KEY = 'pk_test_51SUX2cAtxwsqQt5Tf4eFuJC4uXKoauXjBAU5TiHC7MZnlR7rI6HIyHCMYJFeaCU7rSkQ4FBJD5q53QOw3DPKcOlg00VHp43m4l';
 const CREATE_PAYMENT_INTENT_URL = '/api/create-payment-intent';
 const CREATE_ORDER_URL = '/api/create-order';
+
+// ---------------- POSTCODES & ZONES ----------------
 const approvedPostcodes = ["4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018","4025","4029","4030","4031","4032","4034","4035","4036","4051","4053","4054","4055","4059","4060","4061","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075","4076","4077","4078","4101","4102","4103","4104","4105","4106","4107","4108","4109","4110","4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123","4124","4125","4127","4128","4129","4130","4132","4133","4151","4152","4153","4154","4155","4156","4157","4158","4159","4160","4161","4163","4164","4165","4169","4170","4171","4172","4173","4174","4178","4179","4183","4184","4205","4207","4280","4285","4300","4301","4303","4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504","4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517","4518","4519","4520","4521"];
+
 const ZONES = {
   1: ["4030","4031","4032","4034","4035","4036","4025","4029","4183","4184","4151","4152","4153","4154","4155","4156","4157","4158","4159"],
   2: ["4000","4005","4006","4007","4008","4009","4010","4011","4012","4013","4014","4017","4018","4064","4065","4066","4067","4068","4069","4070","4072","4073","4074","4075","4076","4077","4078","4101","4102","4103","4104","4105","4106","4107","4108","4109"],
   3: ["4110","4111","4112","4113","4114","4115","4116","4117","4118","4119","4120","4121","4122","4123","4124","4125","4127","4128","4129","4130","4132","4133","4160","4161","4163","4164","4165","4169","4170","4171","4172","4173","4174","4178","4179","4205","4207","4280","4285","4300","4301","4303","4304","4305","4306","4307","4308","4311","4340","4346","4500","4501","4502","4503","4504","4505","4506","4507","4508","4509","4510","4511","4512","4513","4514","4515","4516","4517","4518","4519","4520","4521"]
 };
+
 const TIME_BLOCKS = ["8:00 - 11:00","11:00 - 15:00","15:00 - 19:00"];
 const DAYS_ROTATION = [[1,2,3],[2,3,1],[3,1,2],[1,2,3],[2,3,1],[3,1,2]];
 
+// --------------- DELIVERY SLOT LOGIC ----------------
 const slotSelect = document.getElementById('slotSelect');
 const postcodeInput = document.getElementById('postcode');
 
-// ---------------- POSTCODE & SLOT ----------------
-postcodeInput.addEventListener('input',()=>{ checkPostcode(); checkPayEnable(); });
+postcodeInput.addEventListener('input',()=>{checkPostcode(); checkPayEnable();});
 
 function getZoneByPostcode(pc){
   for(const z in ZONES){ if(ZONES[z].includes(pc)) return parseInt(z); }
@@ -203,6 +207,7 @@ function generateSlots(pc){
   const earliest = new Date(now.getTime()+8*3600*1000);
   let day = new Date();
   let slotsAdded=0;
+
   const anytimeOption=document.createElement('option');
   anytimeOption.value='anytime';
   anytimeOption.textContent='Anytime';
@@ -245,7 +250,7 @@ function checkPostcode(){
   return true;
 }
 
-// ---------------- TROLLEY & TOTALS ----------------
+// ---------------- Trolley & Totals ----------------
 let trolley = JSON.parse(localStorage.getItem('grocerygo_trolley')||'[]');
 function updateTotals(){
   const subtotal = trolley.reduce((s,i)=>s+(i.price||0)*(i.quantity||1),0);
@@ -258,7 +263,7 @@ function updateTotals(){
 }
 updateTotals();
 
-// ---------------- ENABLE PAY BUTTON ----------------
+// ---------------- Enable Pay Button ----------------
 function checkPayEnable(){
   const ids=['name','mobile','email','streetNo','streetName','suburb','postcode','state'];
   const allFilled = ids.every(id=>document.getElementById(id).value.trim()!=='');
@@ -268,103 +273,63 @@ function checkPayEnable(){
 ['name','mobile','email','streetNo','streetName','suburb','postcode','state','slotSelect'].forEach(id=>document.getElementById(id).addEventListener('input',checkPayEnable));
 slotSelect.addEventListener('change',checkPayEnable);
 
-// ---------------- BACK TO TROLLEY ----------------
-document.getElementById('backTrolleyBtn').addEventListener('click',()=>window.location.href='trolley.html');
+// Back to trolley
+document.getElementById('backTrolleyBtn').addEventListener('click',()=>{window.location='trolley.html';});
 
-// ---------------- STRIPE ----------------
+// ---------------- Stripe ----------------
 const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
 const elements = stripe.elements();
-const cardNumber = elements.create('cardNumber'); cardNumber.mount('#cardNumber');
-const cardExpiry = elements.create('cardExpiry'); cardExpiry.mount('#cardExpiry');
-const cardCVC = elements.create('cardCvc'); cardCVC.mount('#cardCVC');
+const cardNumber = elements.create('cardNumber',{showIcon:true});
+const cardExpiry = elements.create('cardExpiry');
+const cardCVC = elements.create('cardCvc');
+cardNumber.mount('#cardNumber');
+cardExpiry.mount('#cardExpiry');
+cardCVC.mount('#cardCVC');
 
-// ---------------- PAYMENT ----------------
-document.getElementById('payBtn').addEventListener('click', async () => {
-  const payBtn = document.getElementById('payBtn');
-  payBtn.disabled = true;
-  const { subtotal, deliveryFee, total } = updateTotals();
-
-  const customer = {
-    name: document.getElementById('name').value.trim(),
-    mobile: document.getElementById('mobile').value.trim(),
-    email: document.getElementById('email').value.trim(),
-    unit: document.getElementById('unit').value.trim(),
-    streetNo: document.getElementById('streetNo').value.trim(),
-    streetName: document.getElementById('streetName').value.trim(),
-    suburb: document.getElementById('suburb').value.trim(),
-    postcode: document.getElementById('postcode').value.trim(),
-    state: document.getElementById('state').value
+// ---------------- Payment ----------------
+document.getElementById('payBtn').addEventListener('click',async()=>{
+  const payBtn=document.getElementById('payBtn');
+  const msg=document.getElementById('payMessage');
+  payBtn.disabled=true;
+  msg.textContent='Processing...';
+  const {subtotal,deliveryFee,total}=updateTotals();
+  const payload={
+    trolley,
+    name:document.getElementById('name').value.trim(),
+    email:document.getElementById('email').value.trim(),
+    mobile:document.getElementById('mobile').value.trim(),
+    unit:document.getElementById('unit').value.trim(),
+    streetNo:document.getElementById('streetNo').value.trim(),
+    streetName:document.getElementById('streetName').value.trim(),
+    suburb:document.getElementById('suburb').value.trim(),
+    postcode:document.getElementById('postcode').value.trim(),
+    state:document.getElementById('state').value,
+    slot:slotSelect.value,
+    subtotal,
+    deliveryFee,
+    total
   };
-  const slot = slotSelect.value;
-
-  try {
-    // CREATE PAYMENT INTENT
-    const piResp = await fetch(CREATE_PAYMENT_INTENT_URL, {
+  try{
+    const res = await fetch(CREATE_PAYMENT_INTENT_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        amount: total,
-        name: customer.name,
-        email: customer.email,
-        trolley: trolley
-      })
+      body:JSON.stringify(payload)
     });
-    const piJson = await piResp.json();
-    if(!piResp.ok) throw new Error(piJson.error || 'Payment intent failed');
-
-    const clientSecret = piJson.clientSecret;
-    const confirm = await stripe.confirmCardPayment(clientSecret,{
+    const data=await res.json();
+    if(!res.ok){throw new Error(data.error||'Payment intent failed');}
+    const {clientSecret}=data;
+    const {error:stripeError,paymentIntent}=await stripe.confirmCardPayment(clientSecret,{
       payment_method:{
-        card: cardNumber,
-        billing_details:{
-          name: customer.name,
-          email: customer.email,
-          phone: customer.mobile,
-          address:{
-            line1: customer.streetNo,
-            city: customer.suburb,
-            state: customer.state,
-            postal_code: null // no zip required
-          }
-        }
+        card:cardNumber,
+        billing_details:{name:payload.name,email:payload.email,phone:payload.mobile}
       }
     });
-    if(confirm.error){
-      document.getElementById('payMessage').textContent = confirm.error.message;
-      payBtn.disabled=false;
-      return;
-    }
-
-    // CREATE ORDER
-    const createResp = await fetch(CREATE_ORDER_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        order_number_prefix: 'GG',
-        customer_name: customer.name,
-        email: customer.email,
-        phone: customer.mobile,
-        address_line1: `${customer.unit ? customer.unit + '/' : ''}${customer.streetNo} ${customer.streetName}`,
-        suburb: customer.suburb,
-        postcode: customer.postcode,
-        state: customer.state,
-        country:'Australia',
-        items: trolley,
-        total_amount: total,
-        delivery_fee: deliveryFee,
-        stripe_id: confirm.paymentIntent?.id,
-        stripe_status: confirm.paymentIntent?.status,
-        delivery_slot: slot
-      })
-    });
-    const createJson = await createResp.json();
-    if(!createResp.ok) throw new Error(createJson.error || 'Order creation failed');
-
-    localStorage.setItem('lastOrderNumber', createJson.order_number || `GG-${Date.now()}`);
-    window.location.href='success.html';
-
-  } catch(err){
-    document.getElementById('payMessage').textContent = err.message;
+    if(stripeError){throw stripeError;}
+    // Payment succeeded, redirect
+    window.location='success.html';
+  }catch(err){
+    console.error(err);
+    msg.textContent='Error: '+err.message;
     payBtn.disabled=false;
   }
 });
