@@ -1,52 +1,92 @@
 import Stripe from "stripe";
-// import supabase from "../SupabaseClient.js"; 
+import { createClient } from "@supabase/supabase-js";
 
+// Stripe setup
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2023-10-16" });
 
+// Supabase setup
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
 export default async function handler(req, res) {
-    if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== "POST")
+    return res.status(405).json({ error: "Method not allowed" });
 
-    try {
-        // 1. Destructure the FULL data payload sent from the revised frontend
-        const { trolley, customer, shipping, amount } = req.body; 
+  try {
+    const {
+      trolley,
+      name,
+      email,
+      mobile,
+      slot,
+      unit,
+      streetNo,
+      streetName,
+      suburb,
+      postcode,
+      state,
+      subtotal,
+      deliveryFee,
+      total
+    } = req.body;
 
-        // --- 2. Robust Validation ---
-        if (!Array.isArray(trolley) || trolley.length === 0)
-            return res.status(400).json({ error: "Trolley is empty" });
-        if (!customer || !customer.name || !customer.email || !customer.mobile)
-            return res.status(400).json({ error: "Missing customer data (name, email, or mobile)" });
-        if (!shipping || !shipping.address || !shipping.postcode || !shipping.deliverySlot)
-            return res.status(400).json({ error: "Missing shipping details (address, postcode, or deliverySlot)" });
-        if (!amount)
-            return res.status(400).json({ error: "Missing total amount" });
+    // --- Validation ---
+    if (!Array.isArray(trolley) || trolley.length === 0)
+      return res.status(400).json({ error: "Trolley is empty" });
+    if (!name || !email || !mobile)
+      return res.status(400).json({ error: "Missing customer details" });
+    if (!slot)
+      return res.status(400).json({ error: "Missing delivery slot" });
+    if (!total)
+      return res.status(400).json({ error: "Missing total amount" });
 
-        const grandTotal = amount; 
-        const amountInCents = Math.round(grandTotal * 100);
+    const amountInCents = Math.round(total * 100);
 
-        // --- 3. Create Comprehensive Metadata (CRITICAL for Webhook) ---
-        const metadata = {
-            customer_name: customer.name,
-            customer_email: customer.email,
-            customer_mobile: customer.mobile,
-            delivery_slot: shipping.deliverySlot,
-            
-            // Store complex objects as JSON strings for the webhook to parse
-            shipping_details_json: JSON.stringify(shipping), 
-            trolley_items_json: JSON.stringify(trolley), 
-            grand_total: grandTotal.toFixed(2), // Storing total for verification
-        };
+    // --- Stripe PaymentIntent ---
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInCents,
+      currency: "aud",
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        customer_name: name,
+        customer_email: email,
+        customer_mobile: mobile,
+        delivery_slot: slot,
+        trolley_items_json: JSON.stringify(trolley),
+        subtotal: subtotal.toFixed(2),
+        delivery_fee: deliveryFee.toFixed(2),
+        grand_total: total.toFixed(2)
+      }
+    });
 
-        // --- 4. Create Payment Intent ---
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: amountInCents,
-            currency: "aud",
-            automatic_payment_methods: { enabled: true },
-            metadata: metadata, // Pass the full, secure metadata object
-        });
+    // --- Supabase insert ---
+    const fullAddress = `${streetNo} ${streetName}` + (unit ? `, Unit ${unit}` : '');
+    const { error: supabaseError } = await supabase.from('orders').insert([
+      {
+        customer_name: name,
+        customer_email: email,
+        customer_mobile: mobile,
+        delivery_slot: slot,
+        shipping_address: fullAddress,
+        suburb,
+        postcode,
+        state,
+        trolley_items: JSON.stringify(trolley),
+        subtotal,
+        delivery_fee: deliveryFee,
+        total,
+        payment_status: 'pending', // Will be updated later via webhook
+        stripe_payment_intent: paymentIntent.id
+      }
+    ]);
 
-        res.status(200).json({ clientSecret: paymentIntent.client_secret });
-    } catch (err) {
-        console.error("Payment Intent Error:", err);
-        res.status(500).json({ error: err.message || "Server error occurred during payment intent creation." });
-    }
+    if (supabaseError) throw supabaseError;
+
+    res.status(200).json({ clientSecret: paymentIntent.client_secret });
+  } catch (err) {
+    console.error("Payment Intent / Supabase Error:", err);
+    res.status(500).json({ error: err.message || "Server error occurred" });
+  }
 }
