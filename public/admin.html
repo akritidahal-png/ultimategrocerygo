@@ -1,91 +1,99 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>GroceryGo | Admin Orders</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
-body{font-family:'Poppins',sans-serif;margin:0;padding:0;background:#f8f9fa;color:#222;}
-header{background:#003893;color:white;padding:15px;text-align:center;font-size:1.5em;font-weight:700;}
-.container{width:95%;max-width:1200px;margin:20px auto;}
-table{width:100%;border-collapse:collapse;background:white;box-shadow:0 4px 6px rgba(0,0,0,0.1);}
-th,td{padding:10px;border:1px solid #ddd;text-align:left;}
-th{background:#003893;color:white;}
-input{padding:8px;margin-bottom:10px;width:100%;max-width:300px;border-radius:6px;border:1px solid #ccc;}
+  body { font-family: 'Poppins', sans-serif; margin:0; background:#f8f9fa; color:#222; }
+  header { background:#003893; color:white; padding:15px; text-align:center; }
+  h1 { margin:0; font-size:24px; }
+  .container { width:95%; max-width:1200px; margin:20px auto; }
+  table { width:100%; border-collapse: collapse; background:white; border-radius:8px; overflow:hidden; box-shadow:0 4px 6px rgba(0,0,0,0.06);}
+  th, td { padding:10px; border-bottom:1px solid #eee; text-align:left; font-size:0.9em; }
+  th { background:#003893; color:white; font-weight:600; }
+  tr:hover { background:#f1f1f1; }
+  #searchInput { padding:8px; width:300px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; }
 </style>
 </head>
 <body>
-<header>GroceryGo Admin Orders</header>
+
+<header>
+  <h1>GroceryGo Admin Orders</h1>
+</header>
+
 <div class="container">
-<input type="text" id="search" placeholder="Search by customer name or mobile">
-<table>
-  <thead>
-    <tr>
-      <th>Date</th>
-      <th>Customer</th>
-      <th>Mobile</th>
-      <th>Email</th>
-      <th>Address</th>
-      <th>Slot</th>
-      <th>Items</th>
-      <th>Total</th>
-      <th>Status</th>
-    </tr>
-  </thead>
-  <tbody id="ordersBody">
-  </tbody>
-</table>
+  <input type="text" id="searchInput" placeholder="Search by name or mobile">
+
+  <table>
+    <thead>
+      <tr>
+        <th>Order #</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Phone</th>
+        <th>Total</th>
+        <th>Delivery Slot</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="ordersBody"></tbody>
+  </table>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script>
-const SUPABASE_URL = 'https://your-project.supabase.co';
-const SUPABASE_ANON_KEY = 'your-anon-key';
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-const ordersBody = document.getElementById('ordersBody');
-const searchInput = document.getElementById('search');
+const supabase = createClient(
+  'https://vwxxqjvltbdtgeccydtp.supabase.co', // your Supabase URL
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' // your Service Role Key
+);
+
 let ordersData = [];
 
-// Render orders
-function renderOrders(filter=''){
-  const rows = ordersData
-    .filter(o=>o.name.toLowerCase().includes(filter) || o.mobile.includes(filter))
-    .map(o=>{
-      const addr = `${o.unit?o.unit+' / ':''}${o.streetNo} ${o.streetName}, ${o.suburb} ${o.postcode}, ${o.state}`;
-      const items = o.trolley.map(i=>`${i.name} x${i.quantity}`).join(', ');
-      return `<tr>
-        <td>${new Date(o.created_at).toLocaleString()}</td>
-        <td>${o.name}</td>
-        <td>${o.mobile}</td>
-        <td>${o.email}</td>
-        <td>${addr}</td>
-        <td>${o.slot}</td>
-        <td>${items}</td>
-        <td>$${o.total.toFixed(2)}</td>
-        <td>${o.status}</td>
-      </tr>`;
-    }).join('');
-  ordersBody.innerHTML = rows;
+async function loadOrders() {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) return console.error(error);
+  
+  ordersData = data;
+  renderOrders(data);
 }
 
-// Load initial orders
-async function loadOrders(){
-  const {data,error} = await supabase.from('admin_orders').select('*').order('created_at',{ascending:false});
-  if(error) console.error(error);
-  else {ordersData = data; renderOrders();}
+function renderOrders(data) {
+  const tableBody = document.getElementById('ordersBody');
+  tableBody.innerHTML = '';
+  data.forEach(order => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${order.order_number}</td>
+      <td>${order.customer_name}</td>
+      <td>${order.email}</td>
+      <td>${order.phone}</td>
+      <td>$${Number(order.total_amount).toFixed(2)}</td>
+      <td>${order.delivery_slot}</td>
+      <td>${order.status}</td>
+    `;
+    tableBody.appendChild(row);
+  });
 }
+
+// Search functionality
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  const term = e.target.value.toLowerCase();
+  const filtered = ordersData.filter(o =>
+    o.customer_name.toLowerCase().includes(term) ||
+    o.phone.toLowerCase().includes(term)
+  );
+  renderOrders(filtered);
+});
+
+// Initial load
 loadOrders();
-
-// Search filter
-searchInput.addEventListener('input',()=>{renderOrders(searchInput.value.trim().toLowerCase());});
-
-// Real-time subscription
-supabase.from('admin_orders').on('INSERT', payload=>{
-  ordersData.unshift(payload.new); // add newest order on top
-  renderOrders(searchInput.value.trim().toLowerCase());
-}).subscribe();
 </script>
+
 </body>
 </html>
