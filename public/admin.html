@@ -6,22 +6,23 @@
 <title>GroceryGo | Admin Orders</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;900&display=swap" rel="stylesheet">
 <style>
-/* --- Layout and Color Variables (Matching success.html) --- */
+/* --- Layout and Color Variables --- */
 :root {
     --primary-color: #DC143C; 
     --secondary-color: #003893; 
     --bg-color: #f8f9fa; 
     --text-color: #333;
     --card-bg: #fff;
+    --border-color: #ccc;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Poppins', sans-serif; background: var(--bg-color); color: var(--text-color); line-height: 1.6; }
+body { font-family: 'Poppins', sans-serif; background: var(--bg-color); color: var(--text-color); line-height: 1.4; }
 
 /* Header/Navigation styles */
 header {background:linear-gradient(to right,var(--primary-color),var(--secondary-color));color:#fff;padding:15px 10px;text-align:center;position:sticky;top:0;z-index:1000;}
 header h1{margin:0 0 5px 0;font-size:30px;font-weight:900;display:flex;justify-content:center;align-items:center;height:60px;}
 
-.container{width:98%;max-width:1400px;margin:20px auto;}
+.container{width:98%;max-width:1600px;margin:20px auto;}
 
 /* --- Search Bar Styling --- */
 .search-container {
@@ -30,7 +31,7 @@ header h1{margin:0 0 5px 0;font-size:30px;font-weight:900;display:flex;justify-c
     margin-bottom: 20px;
     padding: 15px;
     background: var(--card-bg);
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 8px; 
     box-shadow: 0 4px 8px rgba(0,0,0,0.05); 
 }
@@ -53,33 +54,145 @@ header h1{margin:0 0 5px 0;font-size:30px;font-weight:900;display:flex;justify-c
 }
 #searchButton:hover { background-color: #002873; }
 
-/* --- Table Styling --- */
+/* --- Table Styling (FIXED AND SLIMMED) --- */
 .table-container { 
     overflow-x: auto; 
-    border: 1px solid #ddd; 
+    border: 1px solid var(--border-color); 
     border-radius: 8px;
     box-shadow: 0 4px 8px rgba(0,0,0,0.05);
     background: var(--card-bg);
 }
-table{width:100%;border-collapse:collapse;margin:0; font-size: 0.9em;}
-th,td{border-bottom:1px solid #eee;padding:12px 8px;text-align:left; border-right: none; border-left: none;}
-th{background:var(--secondary-color);color:white; position: sticky; top: 0; z-index: 10; border-top-left-radius: 8px; border-top-right-radius: 8px; border-bottom: 2px solid white;} 
-table { min-width: 1200px; } 
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin:0; 
+    font-size: 0.9em;
+    min-width: 1400px; 
+    table-layout: fixed; 
+}
+th,td{
+    border: 1px solid #ddd;
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: top;
+    word-wrap: break-word; 
+    line-height: 1.3; 
+}
+th{
+    background: var(--secondary-color);
+    color: white; 
+    position: sticky; 
+    top: 0; 
+    z-index: 10; 
+    font-weight: 600;
+    border-bottom: 2px solid white; 
+} 
+/* Set Fixed Column Widths (Total = 100%) */
+#ordersTable th:nth-child(1), #ordersTable td:nth-child(1) { width: 5%; text-align: center; } /* Order No */
+#ordersTable th:nth-child(2), #ordersTable td:nth-child(2) { width: 9%; } /* Customer Name */
+#ordersTable th:nth-child(3), #ordersTable td:nth-child(3) { width: 7%; } /* Mobile */
+#ordersTable th:nth-child(4), #ordersTable td:nth-child(4) { width: 8%; } /* Status */
+#ordersTable th:nth-child(5), #ordersTable td:nth-child(5) { width: 7%; } /* Date of Order */
+#ordersTable th:nth-child(6), #ordersTable td:nth-child(6) { width: 20%; } /* Delivery Address */
+#ordersTable th:nth-child(7), #ordersTable td:nth-child(7) { width: 12%; } /* Delivery Slot */
+#ordersTable th:nth-child(8), #ordersTable td:nth-child(8) { width: 5%; text-align: center; } /* Zone */
+#ordersTable th:nth-child(9), #ordersTable td:nth-child(9) { width: 6%; text-align: right; } /* Total */
+#ordersTable th:nth-child(10), #ordersTable td:nth-child(10) { width: 21%; } /* Items (Qty) */
+
 
 /* Status Badge Styles */
 .status-badge {
     padding: 3px 8px;
     border-radius: 4px;
     font-weight: 600;
-    font-size: 0.85em;
+    font-size: 0.8em;
     display: inline-block;
+    white-space: nowrap;
 }
-/* Ensure these match your actual status strings in Supabase */
 .status-pending { background-color: #ffc107; color: #333; }
+.status-unfulfilled { background-color: #dc3545; color: white; }
 .status-processing { background-color: #007bff; color: white; }
 .status-shipped { background-color: #17a2b8; color: white; }
 .status-delivered { background-color: #28a745; color: white; }
 .status-cancelled { background-color: #dc3545; color: white; }
+
+/* Delivery Slot Styles */
+.slot-badge {
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.9em; 
+    display: block; 
+    text-align: center;
+    margin-top: 3px; 
+    color: white; 
+}
+.slot-morning { 
+    background-color: #E65100; /* Dark Orange */
+    border: 1px solid #BF360C; 
+}
+.slot-afternoon { 
+    background-color: #38A169; /* Dark Green */
+    border: 1px solid #276749; 
+}
+.slot-evening { 
+    background-color: #673AB7; /* Deep Velvet/Dusk Purple */
+    border: 1px solid #4527A0; 
+}
+.slot-anytime { 
+    background-color: #555; 
+    color: #e0e0e0;
+    border: 1px solid #333;
+}
+.slot-date {
+    font-size: 0.8em;
+    font-weight: 400;
+    color: #666;
+    display: block;
+    margin-bottom: 5px;
+}
+/* Zone Badge Styles */
+.zone-badge {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.9em;
+    display: inline-block;
+}
+.zone-1 { background-color: #d1e7dd; color: #0f5132; }
+.zone-2 { background-color: #fff3cd; color: #664d03; }
+.zone-3 { background-color: #f8d7da; color: #842029; }
+
+
+/* Items List Formatting */
+.items-list-container {
+    /* Use a simple container for the list elements */
+    padding-bottom: 0; 
+}
+
+.see-more-btn {
+    background: none;
+    border: none;
+    color: var(--secondary-color);
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.85em;
+    font-weight: 600;
+    text-decoration: underline;
+    display: block;
+    margin-top: 5px;
+    text-align: left;
+}
+.hidden-items {
+    display: none;
+}
+.show-items {
+    display: block;
+}
+
+#ordersTable tbody tr:hover {
+    background-color: #f5f5f5;
+}
 </style>
 </head>
 <body>
@@ -96,13 +209,14 @@ table { min-width: 1200px; }
             <thead>
                 <tr>
                     <th>Order No</th>
-                    <th>Date</th>
-                    <th>Status</th>
-                    <th>Total</th>
                     <th>Customer Name</th>
                     <th>Mobile</th>
+                    <th>Status</th>
+                    <th>Date of Order</th>
                     <th>Delivery Address</th>
-                    <th>Slot</th>
+                    <th>Delivery Slot</th> 
+                    <th>Zone</th>          
+                    <th style="text-align: right;">Total</th>
                     <th>Items (Qty)</th>
                 </tr>
             </thead>
@@ -116,29 +230,96 @@ table { min-width: 1200px; }
 <script>
 // --- SUPABASE INITIALIZATION ---
 
-// VERIFIED SUPABASE KEYS (You must use the service role key here for full admin access, 
-// or ensure the 'anon' key has read access to ALL rows if you are using it.)
 const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis'; 
-// NOTE: For ADMIN pages, using the ANONYMOUS key requires RLS to be disabled or set to TRUE for SELECT.
-// The safer choice for admin is the SERVICE_ROLE key (found in Project Settings -> API) if you protect this page.
 
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); 
 // ----------------------------------------------------------------
 
-// Global variable to store all fetched orders
 let allOrders = [];
-
 const tbody = document.querySelector('#ordersTable tbody');
 const searchInput = document.getElementById('searchInput');
 const searchButton = document.getElementById('searchButton');
 
+// ** DEFINES THE EXACT ORDER OF THE COLUMNS **
+const COLUMN_ORDER = [
+    'Order No',
+    'Customer Name',
+    'Mobile',
+    'Status',
+    'Date of Order',
+    'Delivery Address',
+    'Delivery Slot',
+    'Zone',
+    'Total',
+    'Items (Qty)'
+];
+
+// ** POSTCODE TO ZONE MAPPING **
+const ZONE_MAP = {
+    'Zone 1': ['4000', '4001', '4002', '4003', '4004', '4005'],
+    'Zone 2': ['4101', '4102', '4103', '4104', '4105', '4106', '4107', '4108', '4109'],
+    'Zone 3': ['4207', '4208', '4209', '4210', '4211', '4212', '4213', '4214']
+};
+
+// ** NEW SIMPLE TOGGLE FUNCTION **
+function toggleItemsDisplay(orderId) {
+    const hiddenDiv = document.getElementById(`hidden-items-${orderId}`);
+    const visibleDiv = document.getElementById(`visible-items-${orderId}`);
+    const button = document.getElementById(`button-items-${orderId}`);
+
+    if (hiddenDiv.classList.contains('hidden-items')) {
+        // Show all items
+        hiddenDiv.classList.remove('hidden-items');
+        hiddenDiv.classList.add('show-items');
+        visibleDiv.classList.add('hidden-items'); // Hide the visible list
+        button.textContent = 'See Less';
+    } else {
+        // Show condensed items
+        hiddenDiv.classList.remove('show-items');
+        hiddenDiv.classList.add('hidden-items');
+        visibleDiv.classList.remove('hidden-items'); // Show the visible list
+        button.textContent = `+ ${button.dataset.hiddenCount} more (See All)`;
+    }
+}
+
 /**
- * Renders the given array of order objects to the table body.
+ * Determines the delivery zone (1, 2, or 3) based on the postcode.
  */
+function getDeliveryZone(postcode) {
+    if (!postcode) return 'N/A';
+    const postCodeStr = String(postcode).trim();
+    
+    if (ZONE_MAP['Zone 1'].includes(postCodeStr)) {
+        return { number: '1', class: 'zone-1' };
+    } else if (ZONE_MAP['Zone 2'].includes(postCodeStr)) {
+        return { number: '2', class: 'zone-2' };
+    } else if (ZONE_MAP['Zone 3'].includes(postCodeStr)) {
+        return { number: '3', class: 'zone-3' };
+    } else {
+        return { number: 'N/A', class: '' };
+    }
+}
+
+/**
+ * Determines the CSS class, text, and emoji for the delivery slot.
+ */
+function getSlotDetails(slotTime) {
+    const timeLower = slotTime.toLowerCase();
+    if (timeLower.includes('8:00 - 11:00')) {
+        return { class: 'slot-morning', text: slotTime, emoji: '🌅' }; 
+    } else if (timeLower.includes('11:00 - 15:00')) {
+        return { class: 'slot-afternoon', text: slotTime, emoji: '☀️' }; 
+    } else if (timeLower.includes('15:00 - 19:00')) {
+        return { class: 'slot-evening', text: slotTime, emoji: '🌇' }; 
+    }
+    return { class: 'slot-anytime', text: slotTime, emoji: '⏳' };
+}
+
+
 function renderOrders(ordersToRender) {
     if (!ordersToRender || ordersToRender.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10">No orders found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10">No orders found.</td></tr>`; 
         return;
     }
 
@@ -146,43 +327,118 @@ function renderOrders(ordersToRender) {
     ordersToRender.forEach(order => {
         const tr = document.createElement('tr');
         
-        // 1. Process Items List (uses the 'items' column)
-        const itemsArray = order.items || [];
-        const itemsList = itemsArray.map(i => `${i.name || 'Item'} (x${i.quantity || 1})`).join('; ');
-
-        // 2. Format Date
-        const date = order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A';
-
-        // 3. Format Delivery Address (uses the confirmed columns)
-        const address = `${order.address_line1 || ''}${order.address_line2 ? ', ' + order.address_line2 : ''}, ${order.suburb || ''}, ${order.postcode || ''}`;
+        // --- 1. PRE-CALCULATE ALL DATA FIELDS ---
         
-        // 4. Format Status Badge
-        const status = order.status || 'pending'; // Default to pending if null
+        // Items (Calculating Full and Condensed Views)
+        const orderId = order.order_number || order.id; // Unique ID for items display
+        const itemsArray = order.items || [];
+        
+        const itemsListFull = itemsArray.map(i => `${i.name || 'Item'} (x${i.quantity || 1})`).join('<br>'); 
+        
+        const visibleItems = itemsArray.slice(0, 2); 
+        const hiddenCount = itemsArray.length - 2;
+        const itemsListCondensed = visibleItems.map(i => `${i.name || 'Item'} (x${i.quantity || 1})`).join('<br>');
+        
+        // Create the HTML structure for the items column
+        let itemsHtml;
+
+        if (hiddenCount > 0) {
+            itemsHtml = `
+                <div id="visible-items-${orderId}" class="items-list-container">
+                    ${itemsListCondensed}
+                </div>
+                <div id="hidden-items-${orderId}" class="hidden-items">
+                    ${itemsListFull}
+                </div>
+                <button id="button-items-${orderId}" class="see-more-btn" 
+                        data-hidden-count="${hiddenCount}"
+                        onclick="toggleItemsDisplay('${orderId}')">
+                    + ${hiddenCount} more (See All)
+                </button>
+            `;
+        } else {
+            // If 2 or fewer items, just show the full list
+            itemsHtml = itemsListFull;
+        }
+
+
+        // Date (Order Date)
+        const dateOfOrder = order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A';
+        const dateOfDelivery = order.delivery_date ? new Date(order.delivery_date).toLocaleDateString() : dateOfOrder;
+
+        // Address
+        let addressParts = [];
+        if (order.unit) addressParts.push(`Unit ${order.unit}`);
+        let streetLine = order.address_line1 || '';
+        if (order.address_line2) streetLine += (streetLine ? ' ' : '') + order.address_line2;
+        if (streetLine) addressParts.push(streetLine);
+        const cityPart = `${order.suburb || ''}, ${order.state || ''} ${order.postcode || ''}`;
+        if (cityPart.trim() !== ',') addressParts.push(cityPart.replace(/^,\s*|,\s*$/g, '').trim());
+        const formattedAddress = addressParts.join('<br>');
+
+        // Status
+        const status = order.fulfillment_status || order.status || 'pending'; 
         const statusClass = status.toLowerCase().replace(/\s/g, '');
         const statusHtml = `<span class="status-badge status-${statusClass}">${status}</span>`;
 
-        // 5. Format Delivery Slot (uses the confirmed column and extracts time)
+        // Zone
+        const zoneData = getDeliveryZone(order.postcode);
+        const zoneHtml = `<span class="zone-badge ${zoneData.class}">${zoneData.number}</span>`;
+
+        // Slot
         const slotDetails = order.delivery_slot?.split('|');
         const slotTime = slotDetails && slotDetails.length > 1 ? slotDetails[1] : (order.delivery_slot || 'Anytime');
+        const slotData = getSlotDetails(slotTime);
+        
+        const slotHtml = `
+            <span class="slot-date">Delivery: ${dateOfDelivery}</span>
+            <span class="slot-badge ${slotData.class}">
+                ${slotData.emoji} ${slotData.text}
+            </span>
+        `;
 
-        // 6. Order Number Display
+        // Other Fields
         const finalOrderNumber = order.order_number || order.id || 'N/A';
+        const totalAmount = `$${order.total_amount?.toFixed(2) || '0.00'}`;
+        const customerName = order.customer_name || '';
+        const mobile = order.phone || '';
 
+        // --- 2. CREATE A MAPPING OBJECT FOR ALL DATA ---
+        const dataMap = {
+            'Order No': finalOrderNumber,
+            'Customer Name': customerName,
+            'Mobile': mobile,
+            'Status': statusHtml,
+            'Date of Order': dateOfOrder,
+            'Delivery Address': formattedAddress,
+            'Delivery Slot': slotHtml,
+            'Zone': zoneHtml, 
+            'Total': totalAmount,
+            'Items (Qty)': itemsHtml 
+        };
+        // ---------------------------------------------
 
-        tr.innerHTML = `
-            <td>${finalOrderNumber}</td> 
-            <td>${date}</td>
-            <td>${statusHtml}</td>
-            <td>$${order.total_amount?.toFixed(2) || '0.00'}</td> 
-            <td>${order.customer_name || ''}</td>
-            <td>${order.phone || ''}</td> 
-            <td>${address}</td>
-            <td>${slotTime}</td>
-            <td>${itemsList}</td>
-        `;
-        tbody.appendChild(tr);
-    });
+        // --- 3. BUILD ROW BASED ON COLUMN_ORDER ARRAY ---
+        let rowHtml = '';
+        COLUMN_ORDER.forEach(header => {
+            let content = dataMap[header] || '';
+            let style = '';
+
+            // Apply specific styles based on header name
+            if (header === 'Order No' || header === 'Zone') style = 'style="text-align: center;"';
+            if (header === 'Total') style = 'style="text-align: right;"';
+            
+            rowHtml += `<td ${style}>${content}</td>`;
+        });
+        
+        tr.innerHTML = rowHtml;
+        tbody.appendChild(tr);
+    });
+    
+    // Attach the global function to the window for the button onclick event to work
+    window.toggleItemsDisplay = toggleItemsDisplay;
 }
+
 
 /**
  * Searches the 'allOrders' array based on the input string.
@@ -191,17 +447,17 @@ function searchOrders() {
     const searchTerm = searchInput.value.toLowerCase().trim();
 
     if (!searchTerm) {
-        renderOrders(allOrders); // Show all orders if search bar is empty
+        renderOrders(allOrders);
         return;
     }
 
     const filteredOrders = allOrders.filter(order => {
-        // Search against the confirmed customer-related columns
         const searchableText = [
             order.customer_name,
             order.postcode,
-            order.phone, // using the correct column name 'phone'
-            order.email
+            order.phone, 
+            order.email,
+            order.order_number
         ].join('|').toLowerCase(); 
 
         return searchableText.includes(searchTerm);
@@ -216,19 +472,17 @@ function searchOrders() {
 async function loadOrders() {
     tbody.innerHTML = `<tr><td colspan="10">Fetching all orders...</td></tr>`;
 
-    // Fetch all columns
     const { data: orders, error } = await supabaseClient
         .from('orders') 
         .select('*')
         .order('created_at', { ascending: false });
 
     if (error) {
-        tbody.innerHTML = `<tr><td colspan="10">Error fetching orders: ${error.message}. **ADMIN PAGE NOTE: Ensure RLS is disabled or set to TRUE for SELECT on your 'orders' table when using the ANONYMOUS key.**</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10">Error fetching orders: ${error.message}.</td></tr>`;
         console.error('Supabase fetch error:', error);
         return;
     }
 
-    // Store all orders globally and render them
     allOrders = orders;
     renderOrders(allOrders);
 }
@@ -239,7 +493,6 @@ searchInput.addEventListener('keyup', (event) => {
     if (event.key === 'Enter') {
         searchOrders();
     }
-    // Automatically reset if the search box is cleared
     if (searchInput.value.trim() === '') {
         renderOrders(allOrders);
     }
