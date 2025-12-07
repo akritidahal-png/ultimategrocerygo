@@ -177,22 +177,22 @@ footer { background: var(--secondary-color); color: white; text-align: center; p
 
 <footer>© 2025 GroceryGo. All rights reserved.</footer>
 
-<script type="module">
-// ----------------------------------------------------------------
-// FIX 1: CORRECTED CDN link to resolve the 'Uncaught SyntaxError'
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-// FIX 2: VERIFIED SUPABASE KEYS
+<script>
+// Your custom logic runs here, using the globally available 'supabase' object
+
+// VERIFIED SUPABASE KEYS
 const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis';
-const supabase = createClient(supabaseUrl, supabaseKey);
-// ----------------------------------------------------------------
+// Initialize client using the globally available createClient function
+const supabase = supabase.createClient(supabaseUrl, supabaseKey); 
 
 function getQueryParam(param) {
   return new URLSearchParams(window.location.search).get(param);
 }
 
-const orderNo = getQueryParam('orderNo');
+const orderNo = getQueryParam('orderNo'); // Changed to 'orderNo' based on the URL you provided
 const orderNumberEl = document.getElementById('orderNumber');
 const deliverySlotEl = document.getElementById('deliverySlot');
 const deliveryAddressEl = document.getElementById('deliveryAddress');
@@ -206,15 +206,15 @@ async function loadOrder() {
     return;
   }
 
-  // Primary attempt: Query by 'order_number'
+  // Attempt to query the database using the URL parameter
   const { data: order, error } = await supabase
-    .from('orders')
+    .from('orders') // Ensure your table name is exactly 'orders'
     .select('*')
-    .eq('order_number', orderNo) 
+    .eq('order_number', orderNo) // Ensure your column name is exactly 'order_number'
     .single();
 
   if (error || !order) {
-    // Fallback if the query fails (Check RLS in Supabase)
+    // If the query fails, display error details
     orderNumberEl.innerHTML = `<span>Error:</span> Could not load order details (Check Console)`;
     deliverySlotEl.textContent = 'Error';
     tbody.innerHTML = `<tr><td colspan="5">Error loading order. Check Console for Supabase error details (RLS or column name likely).</td></tr>`;
