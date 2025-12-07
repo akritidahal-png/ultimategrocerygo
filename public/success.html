@@ -26,26 +26,27 @@ footer{background: var(--nepali-blue); color: white; text-align: center; padding
 <header><h1>GroceryGo</h1></header>
 
 <div class="container">
-  <h2>Thanks — Your Order is Confirmed!</h2>
-  <p>We've received your order. Your order number is shown below for reference:</p>
-  <div class="order-number" id="orderNumber">Loading...</div>
+  <h2>Thanks — Your Order is Confirmed!</h2>
+  <p>We've received your order. Your order number is shown below for reference:</p>
+  <div class="order-number" id="orderNumber">Loading...</div>
 
-  <table class="order-details" id="orderDetails">
-    <thead>
-      <tr>
-        <th>Item</th>
-        <th>Brand</th>
-        <th>Variant</th>
-        <th>Price</th>
-        <th>Quantity</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr><td colspan="5">Fetching your order details...</td></tr>
-    </tbody>
-  </table>
+  <h3>Order Items</h3>
+  <table class="order-details" id="orderDetails">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Brand</th>
+        <th>Variant</th>
+        <th>Price (Total)</th>
+        <th>Quantity</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="5">Fetching your order details...</td></tr>
+    </tbody>
+  </table>
 
-  <a href="index.html" class="btn-home">Back to Home — Continue Shopping</a>
+  <a href="index.html" class="btn-home">Back to Home — Continue Shopping</a>
 </div>
 
 <footer>© 2025 GroceryGo. All rights reserved.</footer>
@@ -53,13 +54,14 @@ footer{background: var(--nepali-blue); color: white; text-align: center; padding
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-// Supabase config
+// Supabase config (USE YOUR ACTUAL KEYS)
 const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis';
 const supabase = createClient(supabaseUrl, supabaseKey)
-// Get order number from URL
+
+// Get order number from URL parameter 'orderNo'
 function getQueryParam(param) {
-  return new URLSearchParams(window.location.search).get(param);
+  return new URLSearchParams(window.location.search).get(param);
 }
 
 const orderNo = getQueryParam('orderNo');
@@ -67,43 +69,50 @@ const orderNumberEl = document.getElementById('orderNumber');
 const tbody = document.querySelector('#orderDetails tbody');
 
 async function loadOrder() {
-  if (!orderNo) {
-    orderNumberEl.textContent = 'Order number not found';
-    tbody.innerHTML = `<tr><td colspan="5">Unable to load order details</td></tr>`;
-    return;
-  }
+  if (!orderNo) {
+    orderNumberEl.textContent = 'Order number not found. (Please check your email)';
+    tbody.innerHTML = `<tr><td colspan="5">Unable to load order details.</td></tr>`;
+    return;
+  }
 
-  const { data: order, error } = await supabase
-    .from('orders')
-    .select('*')
-    .eq('order_number', orderNo)
-    .single();
+  const { data: order, error } = await supabase
+    .from('orders')
+    .select('*')
+    .eq('order_number', orderNo)
+    .single();
 
-  if (error || !order) {
-    orderNumberEl.textContent = 'Error fetching order';
-    tbody.innerHTML = `<tr><td colspan="5">Unable to load order details</td></tr>`;
-    console.error('Supabase fetch error:', error);
-    return;
-  }
+  if (error || !order) {
+    orderNumberEl.textContent = 'Error fetching order details.';
+    tbody.innerHTML = `<tr><td colspan="5">Error: ${error?.message || 'Order not found.'}</td></tr>`;
+    console.error('Supabase fetch error:', error);
+    return;
+  }
 
-  orderNumberEl.textContent = order.order_number || 'Unknown';
+  orderNumberEl.textContent = order.order_number || 'Unknown';
+  
+  // FIX: Check 'items' or 'trolley' property for items array
+  const itemsToDisplay = order.items && Array.isArray(order.items) && order.items.length > 0 
+    ? order.items 
+    : (order.trolley || []);
 
-  if (order.items && Array.isArray(order.items)) {
-    tbody.innerHTML = '';
-    order.items.forEach(item => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${item.name || ''}</td>
-        <td>${item.brand || ''}</td>
-        <td>${item.variant || ''}</td>
-        <td>$${item.price?.toFixed(2) || 0}</td>
-        <td>${item.quantity || 1}</td>
-      `;
-      tbody.appendChild(tr);
-    });
-  } else {
-    tbody.innerHTML = `<tr><td colspan="5">No items found</td></tr>`;
-  }
+  if (itemsToDisplay.length > 0) {
+    tbody.innerHTML = '';
+    itemsToDisplay.forEach(item => {
+      const tr = document.createElement('tr');
+      // Using item.price and item.quantity from the stored item object
+      const itemTotal = (item.price || 0) * (item.quantity || 1);
+      tr.innerHTML = `
+        <td>${item.name || ''}</td>
+        <td>${item.brand || ''}</td>
+        <td>${item.variant || ''}</td>
+        <td>$${itemTotal.toFixed(2)}</td>
+        <td>${item.quantity || 1}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } else {
+    tbody.innerHTML = `<tr><td colspan="5">No item details found for this order.</td></tr>`;
+  }
 }
 
 loadOrder();
