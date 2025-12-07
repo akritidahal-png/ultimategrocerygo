@@ -8,8 +8,9 @@
 <style>
 body{font-family:'Poppins',sans-serif;margin:0;padding:0;background:#f8f9fa;color:#222;}
 header{background:#003893;color:white;padding:15px;text-align:center;}
+h1{margin: 0;}
 table{width:100%;border-collapse:collapse;margin:20px auto;}
-th,td{border:1px solid #ccc;padding:8px;text-align:left;}
+th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size: 0.9em;}
 th{background:#003893;color:white;}
 .container{width:95%;max-width:1200px;margin:20px auto;}
 </style>
@@ -17,64 +18,69 @@ th{background:#003893;color:white;}
 <body>
 <header><h1>Admin Orders</h1></header>
 <div class="container">
-  <table id="ordersTable">
-    <thead>
-      <tr>
-        <th>Order No</th>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Mobile</th>
-        <th>Suburb</th>
-        <th>Postcode</th>
-        <th>Total</th>
-        <th>Status</th>
-        <th>Items</th>
-      </tr>
-    </thead>
-    <tbody><tr><td colspan="9">Loading orders...</td></tr></tbody>
-  </table>
+  <table id="ordersTable">
+    <thead>
+      <tr>
+        <th>Order No</th>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Mobile</th>
+        <th>Suburb</th>
+        <th>Postcode</th>
+        <th>Total</th>
+        <th>Status</th>
+        <th>Items</th>
+      </tr>
+    </thead>
+    <tbody><tr><td colspan="9">Loading orders...</td></tr></tbody>
+  </table>
 </div>
 
 <script type="module">
 import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
+// Supabase config (USE YOUR ACTUAL KEYS)
 const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function loadOrders() {
-  const { data: orders, error } = await supabase
-    .from('orders')
-    .select('*')
-    .order('created_at', { ascending: false });
+  const { data: orders, error } = await supabase
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false });
 
-  const tbody = document.querySelector('#ordersTable tbody');
-  if (error || !orders.length) {
-    tbody.innerHTML = `<tr><td colspan="9">No orders found</td></tr>`;
-    return;
-  }
+  const tbody = document.querySelector('#ordersTable tbody');
+  if (error || !orders || orders.length === 0) {
+    const message = error ? `Error: ${error.message}` : 'No orders found';
+    tbody.innerHTML = `<tr><td colspan="9">${message}</td></tr>`;
+    return;
+  }
 
-  tbody.innerHTML = '';
-  orders.forEach(order => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${order.order_number || ''}</td>
-      <td>${order.customer_name || ''}</td>
-      <td>${order.email || ''}</td>
-      <td>${order.phone || ''}</td>
-      <td>${order.suburb || ''}</td>
-      <td>${order.postcode || ''}</td>
-      <td>$${order.total_amount?.toFixed(2) || 0}</td>
-      <td>${order.status || ''}</td>
-      <td>${(order.items||[]).map(i=>i.name).join(', ')}</td>
-    `;
-    tbody.appendChild(tr);
-  });
+  tbody.innerHTML = '';
+  orders.forEach(order => {
+    const tr = document.createElement('tr');
+    
+    // Check 'trolley' or 'items' for the list of purchased products
+    const itemsArray = order.trolley || order.items || [];
+    const itemsList = itemsArray.map(i => `${i.name || 'Item'} (x${i.quantity || 1})`).join('; ');
+
+    tr.innerHTML = `
+      <td>${order.order_number || order.id || 'N/A'}</td> 
+      <td>${order.name || ''}</td>
+      <td>${order.email || ''}</td>
+      <td>${order.mobile || ''}</td> 
+      <td>${order.suburb || ''}</td>
+      <td>${order.postcode || ''}</td>
+      <td>$${order.total?.toFixed(2) || '0.00'}</td> 
+      <td>${order.status || 'Processing'}</td>
+      <td>${itemsList}</td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
 
 loadOrders();
 </script>
 </body>
 </html>
-
-
