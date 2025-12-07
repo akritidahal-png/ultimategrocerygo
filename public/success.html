@@ -194,33 +194,33 @@ function getQueryParam(param) {
   return new URLSearchParams(window.location.search).get(param);
 }
 
-// NOTE: This assumes your redirect URL looks like success.html?orderNo=123456
-const orderNo = getQueryParam('orderNo'); 
+// *** CRITICAL FIX: We are now looking for 'pid' from the URL ***
+const orderIdFromUrl = getQueryParam('pid'); 
 const orderNumberEl = document.getElementById('orderNumber');
 const deliverySlotEl = document.getElementById('deliverySlot');
 const deliveryAddressEl = document.getElementById('deliveryAddress');
 const tbody = document.querySelector('#orderDetailsTable tbody');
 
 async function loadOrder() {
-  if (!orderNo) {
+  if (!orderIdFromUrl) {
     orderNumberEl.innerHTML = '<span>Order Number is:</span> N/A - Missing ID in URL';
     deliverySlotEl.textContent = 'N/A';
     tbody.innerHTML = `<tr><td colspan="5">Unable to load order details (No ID in URL).</td></tr>`;
     return;
   }
 
-  // IMPORTANT: Using the corrected variable name: supabaseClient
+  // *** CRITICAL FIX: We are now searching by the column 'stripe_pid' ***
   const { data: order, error } = await supabaseClient
-    .from('orders') // Assumes your table is named 'orders'
+    .from('orders') 
     .select('*')
-    .eq('order_number', orderNo) // Assumes your order ID column is 'order_number'
+    .eq('stripe_pid', orderIdFromUrl) // Search the 'stripe_pid' column for the payment ID
     .single();
 
   if (error || !order) {
     orderNumberEl.innerHTML = `<span>Error:</span> Could not load order details (Check Console)`;
     deliverySlotEl.textContent = 'Error';
-    tbody.innerHTML = `<tr><td colspan="5">Error loading order. Check Console for Supabase error details (RLS or column name likely).</td></tr>`;
-    console.error('Supabase fetch error for orderNo:', orderNo, error);
+    tbody.innerHTML = `<tr><td colspan="5">Error loading order. Please ensure the 'stripe_pid' column exists and RLS is enabled.</td></tr>`;
+    console.error('Supabase fetch error for pid:', orderIdFromUrl, error);
     return;
   }
   
