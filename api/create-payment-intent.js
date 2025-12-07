@@ -19,7 +19,6 @@ export default async function handler(req, res) {
     if (!total) return res.status(400).json({ error: 'Missing total' });
 
     const amountInCents = Math.round(Number(total) * 100);
-    const shippingDetails = { address: `${streetNo} ${streetName}`, unit: unit || '', suburb, postcode, state, deliveryFee };
 
     // Generate sequential GGX order number
     const { data: lastOrder } = await supabase
@@ -37,21 +36,18 @@ export default async function handler(req, res) {
     const orderNumber = 'GGX' + String(nextOrderNum).padStart(4, '0');
 
     // Create Stripe PaymentIntent
+    const trolleySummary = trolley.map(i => i.name).join(', ').slice(0, 500); // truncate to max 500 chars
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amountInCents,
       currency: 'aud',
       automatic_payment_methods: { enabled: true },
       metadata: {
+        order_number: orderNumber,
         customer_name: name,
         customer_email: email,
         customer_mobile: mobile,
         delivery_slot: slot,
-        trolley_items_json: JSON.stringify(trolley),
-        shipping_details_json: JSON.stringify(shippingDetails),
-        subtotal,
-        delivery_fee: deliveryFee,
-        grand_total: total,
-        order_number: orderNumber
+        trolley_summary: trolleySummary // small summary instead of full JSON
       }
     });
 
@@ -81,7 +77,7 @@ export default async function handler(req, res) {
       throw insertError; 
     }
 
-    // Return both clientSecret and orderNumber
+    // Return clientSecret and orderNumber for frontend
     return res.status(200).json({ clientSecret: paymentIntent.client_secret, orderNumber });
 
   } catch (err) {
