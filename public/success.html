@@ -186,7 +186,7 @@ footer { background: var(--secondary-color); color: white; text-align: center; p
 const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis';
 
-// FIX: Renamed the client variable to avoid the ReferenceError
+// FIX: Renamed the client variable to supabaseClient to avoid ReferenceError 
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey); 
 // ----------------------------------------------------------------
 
@@ -194,6 +194,7 @@ function getQueryParam(param) {
   return new URLSearchParams(window.location.search).get(param);
 }
 
+// NOTE: This assumes your redirect URL looks like success.html?orderNo=123456
 const orderNo = getQueryParam('orderNo'); 
 const orderNumberEl = document.getElementById('orderNumber');
 const deliverySlotEl = document.getElementById('deliverySlot');
@@ -210,9 +211,9 @@ async function loadOrder() {
 
   // IMPORTANT: Using the corrected variable name: supabaseClient
   const { data: order, error } = await supabaseClient
-    .from('orders') // Ensure your table name is exactly 'orders'
+    .from('orders') // Assumes your table is named 'orders'
     .select('*')
-    .eq('order_number', orderNo) // Ensure your column name is exactly 'order_number'
+    .eq('order_number', orderNo) // Assumes your order ID column is 'order_number'
     .single();
 
   if (error || !order) {
