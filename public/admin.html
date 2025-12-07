@@ -8,9 +8,9 @@
 <style>
 /* --- Layout and Color Variables (Matching success.html) --- */
 :root {
-    --primary-color: #DC143C; /* Crimson */
-    --secondary-color: #003893; /* Nepali Blue */
-    --bg-color: #f8f9fa; /* Light Background */
+    --primary-color: #DC143C; 
+    --secondary-color: #003893; 
+    --bg-color: #f8f9fa; 
     --text-color: #333;
     --card-bg: #fff;
 }
@@ -31,8 +31,8 @@ header h1{margin:0 0 5px 0;font-size:30px;font-weight:900;display:flex;justify-c
     padding: 15px;
     background: var(--card-bg);
     border: 1px solid #ddd;
-    border-radius: 8px; /* Slightly softer corners */
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05); /* Lighter shadow */
+    border-radius: 8px; 
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05); 
 }
 #searchInput {
     flex-grow: 1;
@@ -43,7 +43,7 @@ header h1{margin:0 0 5px 0;font-size:30px;font-weight:900;display:flex;justify-c
 }
 #searchButton {
     padding: 10px 15px;
-    background-color: var(--secondary-color); /* Used Nepali Blue for Admin contrast */
+    background-color: var(--secondary-color); 
     color: white;
     border: none;
     border-radius: 4px;
@@ -110,13 +110,15 @@ table { min-width: 1200px; }
 </div>
 
 <script type="module">
-// FINAL RELIABLE SUPABASE IMPORT FIX
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/module.js";
+// ----------------------------------------------------------------
+// FIX 1: Corrected CDN link for Supabase
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
 
-// Supabase config (Now using the verified keys)
+// FIX 2: VERIFIED SUPABASE KEYS
 const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdpa2RxYXhkcWZtemR2b2xreGJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIyOTQwNDIsImV4cCI6MjA3Nzg3MDA0Mn0.pJ-9KfCxV7YT5loiURW14xRmf72s1EZRFRh4iKGnQis';
 const supabase = createClient(supabaseUrl, supabaseKey);
+// ----------------------------------------------------------------
 
 // Global variable to store all fetched orders
 let allOrders = [];
@@ -127,7 +129,6 @@ const searchButton = document.getElementById('searchButton');
 
 /**
  * Renders the given array of order objects to the table body.
- * @param {Array} ordersToRender - The array of orders to display.
  */
 function renderOrders(ordersToRender) {
     if (!ordersToRender || ordersToRender.length === 0) {
@@ -156,8 +157,12 @@ function renderOrders(ordersToRender) {
         // 5. Format Delivery Slot
         const slot = order.slot?.split('|')[1] || 'N/A';
 
+        // 6. GUARANTEED ORDER NUMBER DISPLAY (Uses order_number, falls back to Supabase 'id')
+        const finalOrderNumber = order.order_number || order.id || 'N/A';
+
+
         tr.innerHTML = `
-            <td>${order.order_number || order.id || 'N/A'}</td> 
+            <td>${finalOrderNumber}</td> 
             <td>${date}</td>
             <td>${statusHtml}</td>
             <td>$${order.total?.toFixed(2) || '0.00'}</td> 
@@ -202,12 +207,12 @@ function searchOrders() {
  */
 async function loadOrders() {
     const { data: orders, error } = await supabase
-        .from('orders')
+        .from('orders') // Assumes table is named 'orders'
         .select('*')
         .order('created_at', { ascending: false });
 
     if (error) {
-        tbody.innerHTML = `<tr><td colspan="10">Error fetching orders: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10">Error fetching orders: ${error.message}. **Check RLS (Row Level Security) settings.**</td></tr>`;
         console.error('Supabase fetch error:', error);
         return;
     }
@@ -220,7 +225,6 @@ async function loadOrders() {
 // Attach event listeners for search
 searchButton.addEventListener('click', searchOrders);
 searchInput.addEventListener('keyup', (event) => {
-    // Optionally trigger search on Enter key
     if (event.key === 'Enter') {
         searchOrders();
     }
@@ -234,4 +238,3 @@ loadOrders();
 </script>
 </body>
 </html>
-
