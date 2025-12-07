@@ -179,8 +179,8 @@ footer { background: var(--secondary-color); color: white; text-align: center; p
 
 <script type="module">
 // ----------------------------------------------------------------
-// FIX 1: Corrected CDN link for Supabase
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+// FIX 1: CORRECTED CDN link to resolve the 'Uncaught SyntaxError'
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
 
 // FIX 2: VERIFIED SUPABASE KEYS
 const supabaseUrl = 'https://gikdqaxdqfmzdvolkxbn.supabase.co';
@@ -214,8 +214,8 @@ async function loadOrder() {
     .single();
 
   if (error || !order) {
-    // Fallback if the query fails (likely due to wrong column name or RLS)
-    orderNumberEl.innerHTML = `<span>Error:</span> Check Console (Code: ${error?.code || '404'})`;
+    // Fallback if the query fails (Check RLS in Supabase)
+    orderNumberEl.innerHTML = `<span>Error:</span> Could not load order details (Check Console)`;
     deliverySlotEl.textContent = 'Error';
     tbody.innerHTML = `<tr><td colspan="5">Error loading order. Check Console for Supabase error details (RLS or column name likely).</td></tr>`;
     console.error('Supabase fetch error for orderNo:', orderNo, error);
